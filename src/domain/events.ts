@@ -1,5 +1,5 @@
 import { Payment } from './payment';
-import { GatewayType, PaymentState } from './types';
+import { GatewayType } from './types';
 
 /**
  * Domain Events for Payment Lifecycle
@@ -133,7 +133,7 @@ export class PaymentEventFactory {
    * Create base event properties
    */
   private static createBaseEvent(
-    eventType: EventType,
+    _eventType: EventType,
     aggregateId: string,
     version: number
   ): Omit<DomainEvent, 'eventType'> {

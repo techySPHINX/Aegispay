@@ -1,5 +1,5 @@
 import { Payment } from '../domain/payment';
-import { GatewayResponse, Result } from '../domain/types';
+import { Result } from '../domain/types';
 
 /**
  * Gateway interface that all payment gateways must implement

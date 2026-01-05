@@ -1,4 +1,3 @@
-import { v4 as uuidv4 } from 'uuid';
 import { Payment } from '../domain/payment';
 import {
   PaymentState,
@@ -11,7 +10,12 @@ import {
   Result,
   GatewayType,
 } from '../domain/types';
-import { PaymentEventFactory, EventType } from '../domain/events';
+
+// UUID generator function
+function generateId(): string {
+  return `pay_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+}
+import { PaymentEventFactory } from '../domain/events';
 import { PaymentRepository } from '../infra/db';
 import { EventBus } from '../infra/eventBus';
 import { GatewayRegistry } from '../gateways/registry';
@@ -19,7 +23,7 @@ import { PaymentRouter, RoutingContext } from '../orchestration/router';
 import { RetryPolicy } from '../orchestration/retryPolicy';
 import { CircuitBreaker } from '../orchestration/circuitBreaker';
 import { Logger, MetricsCollector } from '../infra/observability';
-import { GatewayError } from '../gateways/gateway';
+import { GatewayError, PaymentGateway } from '../gateways/gateway';
 
 /**
  * Payment Service - Core orchestration engine
@@ -79,7 +83,7 @@ export class PaymentService {
 
       // Create new payment
       const payment = new Payment({
-        id: uuidv4(),
+        id: generateId(),
         idempotencyKey: request.idempotencyKey,
         state: PaymentState.INITIATED,
         amount: new Money(request.amount, request.currency),
@@ -239,7 +243,7 @@ export class PaymentService {
    */
   private async executePayment(
     payment: Payment,
-    gateway: any,
+    gateway: PaymentGateway,
     circuitBreaker: CircuitBreaker
   ): Promise<Payment> {
     // Initiate

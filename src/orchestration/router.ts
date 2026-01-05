@@ -220,7 +220,7 @@ export class PaymentRouter {
         return Number(contextValue) < Number(condition.value);
 
       case 'in':
-        return Array.isArray(condition.value) && condition.value.includes(contextValue as string);
+        return Array.isArray(condition.value) && (condition.value as (string | number)[]).includes(contextValue as string | number);
 
       case 'contains':
         return String(contextValue).includes(String(condition.value));
@@ -276,7 +276,7 @@ export class PaymentRouter {
   ): Array<{ gateway: GatewayType; cost: number }> {
     const breakdown: Array<{ gateway: GatewayType; cost: number }> = [];
 
-    this.gatewayCosts.forEach((cost, gatewayType) => {
+    this.gatewayCosts.forEach((_cost, gatewayType) => {
       const totalCost = this.calculateTransactionCost(gatewayType, amount);
       breakdown.push({ gateway: gatewayType, cost: totalCost });
     });

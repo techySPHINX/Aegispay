@@ -24,7 +24,7 @@ export class MockGateway implements PaymentGateway {
   private latency: number;
 
   constructor(
-    private config: GatewayConfig,
+    _config: GatewayConfig,
     options: {
       successRate?: number; // 0-1
       latency?: number; // milliseconds

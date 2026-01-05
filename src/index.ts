@@ -8,11 +8,12 @@ import { InMemoryPaymentRepository, PaymentRepository } from './infra/db';
 import { InMemoryEventBus, ConsoleEventBus, CompositeEventBus, EventBus } from './infra/eventBus';
 import { GatewayRegistry } from './gateways/registry';
 import { MockGateway } from './gateways/mockGateway';
-import { PaymentRouter } from './orchestration/router';
-import { RetryPolicy } from './orchestration/retryPolicy';
+import { PaymentRouter, RoutingRule } from './orchestration/router';
+import { RetryPolicy, RetryConfig } from './orchestration/retryPolicy';
 import { ConsoleLogger, InMemoryMetricsCollector } from './infra/observability';
 import { AegisPayConfig, mergeConfig } from './config/config';
-import { GatewayType, GatewayConfig } from './gateways/gateway';
+import { GatewayConfig } from './gateways/gateway';
+import { GatewayType } from './domain/types';
 import { Payment } from './domain/payment';
 
 /**
@@ -48,7 +49,7 @@ export class AegisPay {
 
     // Apply routing rules
     if (finalConfig.routing?.rules) {
-      finalConfig.routing.rules.forEach((rule) => this.router.addRule(rule));
+      finalConfig.routing.rules.forEach((rule) => this.router.addRule(rule as RoutingRule));
     }
 
     // Apply gateway costs
@@ -57,7 +58,7 @@ export class AegisPay {
     }
 
     // Initialize retry policy
-    const retryPolicy = new RetryPolicy(finalConfig.retry);
+    const retryPolicy = new RetryPolicy(finalConfig.retry as RetryConfig);
 
     // Initialize payment service
     this.paymentService = new PaymentService(
