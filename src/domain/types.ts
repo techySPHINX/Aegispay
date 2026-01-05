@@ -195,7 +195,7 @@ export class Success<T> {
   readonly isSuccess = true;
   readonly isFailure = false;
 
-  constructor(readonly value: T) {}
+  constructor(readonly value: T) { }
 
   map<U>(fn: (value: T) => U): Result<U, never> {
     return new Success(fn(this.value));
@@ -210,7 +210,7 @@ export class Failure<E> {
   readonly isSuccess = false;
   readonly isFailure = true;
 
-  constructor(readonly error: E) {}
+  constructor(readonly error: E) { }
 
   map<U>(_fn: (value: never) => U): Result<U, E> {
     return this as unknown as Result<U, E>;
