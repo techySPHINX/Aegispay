@@ -15,7 +15,7 @@ import {
 function generateId(): string {
   return `pay_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
 }
-import { PaymentEventFactory } from '../domain/events';
+import { PaymentEventFactory, PaymentEvent } from '../domain/events';
 import { PaymentRepository } from '../infra/db';
 import { EventBus } from '../infra/eventBus';
 import { GatewayRegistry } from '../gateways/registry';
@@ -24,6 +24,7 @@ import { RetryPolicy } from '../orchestration/retryPolicy';
 import { CircuitBreaker } from '../orchestration/circuitBreaker';
 import { Logger, MetricsCollector } from '../infra/observability';
 import { GatewayError, PaymentGateway } from '../gateways/gateway';
+import { LockManager, InMemoryLockManager, withLock } from '../infra/lockManager';
 
 /**
  * Payment Service - Core orchestration engine
@@ -47,6 +48,8 @@ export interface ProcessPaymentRequest {
 export class PaymentService {
   private circuitBreakers: Map<GatewayType, CircuitBreaker> = new Map();
   private eventVersion: Map<string, number> = new Map(); // paymentId -> version
+  private lockManager: LockManager;
+  private instanceId: string; // Unique ID for this service instance
 
   constructor(
     private repository: PaymentRepository,
@@ -55,8 +58,12 @@ export class PaymentService {
     private router: PaymentRouter,
     private retryPolicy: RetryPolicy,
     private logger: Logger,
-    private metrics: MetricsCollector
-  ) { }
+    private metrics: MetricsCollector,
+    lockManager?: LockManager
+  ) {
+    this.lockManager = lockManager || new InMemoryLockManager();
+    this.instanceId = `svc_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+  }
 
   /**
    * Create a new payment (Idempotent)
@@ -67,51 +74,64 @@ export class PaymentService {
     const startTime = Date.now();
 
     try {
-      // Check for existing payment with same idempotency key
-      const existingPayment = await this.repository.findByIdempotencyKey(
-        request.idempotencyKey
+      // Use lock to prevent concurrent creates with same idempotency key
+      return await withLock(
+        this.lockManager,
+        `payment:create:${request.idempotencyKey}`,
+        this.instanceId,
+        30000, // 30 second lock TTL
+        async () => {
+          // Check for existing payment with same idempotency key
+          const existingPayment = await this.repository.findByIdempotencyKey(
+            request.idempotencyKey
+          );
+
+          if (existingPayment) {
+            this.logger.info('Payment already exists with idempotency key', {
+              paymentId: existingPayment.id,
+              idempotencyKey: request.idempotencyKey,
+            });
+            this.metrics.increment('payment.idempotency_hit');
+            return ok(existingPayment);
+          }
+
+          // Create new payment
+          const payment = new Payment({
+            id: generateId(),
+            idempotencyKey: request.idempotencyKey,
+            state: PaymentState.INITIATED,
+            amount: new Money(request.amount, request.currency),
+            paymentMethod: request.paymentMethod,
+            customer: request.customer,
+            metadata: request.metadata || {},
+          });
+
+          // Save payment
+          const savedPayment = await this.repository.save(payment);
+
+          // Emit event
+          await this.publishEvent(
+            PaymentEventFactory.createPaymentInitiated(savedPayment, this.getNextVersion(payment.id))
+          );
+
+          const duration = Date.now() - startTime;
+          this.logger.info('Payment created successfully', {
+            paymentId: savedPayment.id,
+            amount: request.amount,
+            currency: request.currency,
+            duration,
+          });
+
+          this.metrics.increment('payment.created');
+          this.metrics.histogram('payment.create_duration', duration);
+
+          return ok(savedPayment);
+        },
+        {
+          maxWaitMs: 30000,
+          retryIntervalMs: 100,
+        }
       );
-
-      if (existingPayment) {
-        this.logger.info('Payment already exists with idempotency key', {
-          paymentId: existingPayment.id,
-          idempotencyKey: request.idempotencyKey,
-        });
-        this.metrics.increment('payment.idempotency_hit');
-        return ok(existingPayment);
-      }
-
-      // Create new payment
-      const payment = new Payment({
-        id: generateId(),
-        idempotencyKey: request.idempotencyKey,
-        state: PaymentState.INITIATED,
-        amount: new Money(request.amount, request.currency),
-        paymentMethod: request.paymentMethod,
-        customer: request.customer,
-        metadata: request.metadata || {},
-      });
-
-      // Save payment
-      const savedPayment = await this.repository.save(payment);
-
-      // Emit event
-      await this.publishEvent(
-        PaymentEventFactory.createPaymentInitiated(savedPayment, this.getNextVersion(payment.id))
-      );
-
-      const duration = Date.now() - startTime;
-      this.logger.info('Payment created successfully', {
-        paymentId: savedPayment.id,
-        amount: request.amount,
-        currency: request.currency,
-        duration,
-      });
-
-      this.metrics.increment('payment.created');
-      this.metrics.histogram('payment.create_duration', duration);
-
-      return ok(savedPayment);
     } catch (error) {
       this.logger.error('Failed to create payment', error as Error, {
         idempotencyKey: request.idempotencyKey,
@@ -130,51 +150,64 @@ export class PaymentService {
     const startTime = Date.now();
 
     try {
-      // Retrieve payment
-      let payment = await this.repository.findById(request.paymentId);
-      if (!payment) {
-        throw new Error(`Payment ${request.paymentId} not found`);
-      }
+      // Lock payment processing to prevent concurrent processing
+      return await withLock(
+        this.lockManager,
+        `payment:process:${request.paymentId}`,
+        this.instanceId,
+        60000, // 60 second lock TTL for processing
+        async () => {
+          // Retrieve payment
+          let payment = await this.repository.findById(request.paymentId);
+          if (!payment) {
+            throw new Error(`Payment ${request.paymentId} not found`);
+          }
 
-      this.logger.info('Processing payment', {
-        paymentId: payment.id,
-        state: payment.state,
-      });
+          this.logger.info('Processing payment', {
+            paymentId: payment.id,
+            state: payment.state,
+          });
 
-      // Select gateway
-      const gatewayType = request.gatewayType || this.selectGateway(payment);
-      if (!gatewayType) {
-        throw new Error('No gateway available for payment processing');
-      }
+          // Select gateway
+          const gatewayType = request.gatewayType || this.selectGateway(payment);
+          if (!gatewayType) {
+            throw new Error('No gateway available for payment processing');
+          }
 
-      const gateway = this.gatewayRegistry.getGateway(gatewayType);
-      if (!gateway) {
-        throw new Error(`Gateway ${gatewayType} not found`);
-      }
+          const gateway = this.gatewayRegistry.getGateway(gatewayType);
+          if (!gateway) {
+            throw new Error(`Gateway ${gatewayType} not found`);
+          }
 
-      // Get or create circuit breaker for this gateway
-      const circuitBreaker = this.getCircuitBreaker(gatewayType);
+          // Get or create circuit breaker for this gateway
+          const circuitBreaker = this.getCircuitBreaker(gatewayType);
 
-      // Step 1: Authenticate
-      payment = await this.authenticatePayment(payment, gatewayType, circuitBreaker);
-      await this.repository.update(payment);
+          // Step 1: Authenticate
+          payment = await this.authenticatePayment(payment, gatewayType, circuitBreaker);
+          await this.repository.update(payment);
 
-      // Step 2: Process
-      payment = await this.executePayment(payment, gateway, circuitBreaker);
-      await this.repository.update(payment);
+          // Step 2: Process
+          payment = await this.executePayment(payment, gateway, circuitBreaker);
+          await this.repository.update(payment);
 
-      const duration = Date.now() - startTime;
-      this.logger.info('Payment processed successfully', {
-        paymentId: payment.id,
-        state: payment.state,
-        duration,
-      });
+          const duration = Date.now() - startTime;
+          this.logger.info('Payment processed successfully', {
+            paymentId: payment.id,
+            state: payment.state,
+            duration,
+          });
 
-      this.metrics.increment('payment.processed', { gateway: gatewayType });
-      this.metrics.histogram('payment.process_duration', duration);
-      this.gatewayRegistry.recordRequest(gatewayType, true, duration);
+          this.metrics.increment('payment.processed', { gateway: gatewayType });
+          this.metrics.histogram('payment.process_duration', duration);
+          this.gatewayRegistry.recordRequest(gatewayType, true, duration);
 
-      return ok(payment);
+          return ok(payment);
+        },
+        {
+          maxWaitMs: 60000,
+          retryIntervalMs: 100,
+        }
+      );
     } catch (error) {
       this.logger.error('Payment processing failed', error as Error, {
         paymentId: request.paymentId,
@@ -348,7 +381,7 @@ export class PaymentService {
   /**
    * Publish event
    */
-  private async publishEvent(event: any): Promise<void> {
+  private async publishEvent(event: PaymentEvent): Promise<void> {
     await this.eventBus.publish(event);
   }
 

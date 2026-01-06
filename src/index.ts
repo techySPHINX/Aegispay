@@ -141,7 +141,7 @@ export class AegisPay {
   /**
    * Get gateway metrics
    */
-  getGatewayMetrics(gatewayType?: GatewayType) {
+  getGatewayMetrics(gatewayType?: GatewayType): unknown {
     if (gatewayType) {
       return this.gatewayRegistry.getMetrics(gatewayType);
     }
@@ -151,14 +151,14 @@ export class AegisPay {
   /**
    * Get SDK metrics
    */
-  getMetrics() {
+  getMetrics(): unknown {
     return this.metrics.getMetrics();
   }
 
   /**
    * Get gateway health summary
    */
-  getHealthSummary() {
+  getHealthSummary(): unknown {
     return this.gatewayRegistry.getHealthSummary();
   }
 }

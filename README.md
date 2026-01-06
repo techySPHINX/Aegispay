@@ -1,40 +1,75 @@
 # AegisPay
 
-A production-grade payment orchestration SDK designed for high-volume payment traffic with correctness, reliability, and extensibility as first-class concerns.
+A production-grade payment orchestration SDK designed for high-volume payment traffic with **correctness, reliability, and scalability** as first-class concerns.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)](https://www.typescriptlang.org/)
 
 ## Features
 
-- 🔒 **Idempotent Operations**: Prevents double-charging through idempotency keys
+- 🔒 **Concurrency-Safe**: Distributed locking prevents race conditions and duplicate payments
 - 🔄 **State Machine**: Strict payment lifecycle management with validated transitions
+- 🛡️ **Crash Recovery**: Event sourcing ensures correctness even after process crashes
 - 🌐 **Gateway Agnostic**: Pluggable payment gateway integration (Stripe, Razorpay, PayPal, etc.)
 - 🔁 **Fault Tolerance**: Circuit breakers, exponential backoff retries, and timeout handling
-- 📊 **Event-Driven**: Domain events for all major lifecycle changes
+- 📊 **Event-Driven**: Complete audit trail with event sourcing
 - 🎯 **Smart Routing**: Route payments based on success rate, latency, cost, or custom rules
 - 📈 **Observable**: Structured logging, metrics collection, and tracing-friendly design
 - 🧩 **Extensible**: Add custom gateways, validators, fraud checks, and routing strategies
-- 💪 **Production Ready**: Handles network failures, race conditions, and partial updates
-- 🏗️ **Clean Architecture**: Layered design following DDD and functional programming principles
+- 💪 **Production Ready**: Handles network failures, partial failures, and process crashes
+- 🏗️ **Functional Design**: Pure business logic with isolated side effects for maximum testability
+
+## 🚀 Production Reliability
+
+AegisPay is built for mission-critical payment workloads:
+
+- **Zero Duplicate Payments**: Idempotency + distributed locking ensures at-most-once processing
+- **Crash Recovery**: Event sourcing allows state reconstruction after crashes
+- **Partial Failure Handling**: Gateway verification prevents double-charging
+- **Timeout Resilience**: Automatic retry with exponential backoff
+- **Network Resilience**: Circuit breakers prevent cascading failures
+
+**Read more**: [Production Reliability Guide](docs/PRODUCTION_RELIABILITY.md)
+
+## 📚 Documentation
+
+### Core Concepts
+
+- **[Production Reliability](docs/PRODUCTION_RELIABILITY.md)** - Comprehensive guide to scale, reliability, and correctness guarantees
+- **[Concurrency & Idempotency](docs/CONCURRENCY.md)** - Deep dive into distributed locking and concurrent request handling
+- **[Functional Programming](docs/FUNCTIONAL_PROGRAMMING.md)** - Pure orchestration with IO monads and adapters
+- **[Architecture](docs/ARCHITECTURE.md)** - System design and component overview
+- **[API Reference](docs/API.md)** - Complete API documentation
+- **[Failure Scenarios](docs/FAILURE_SCENARIOS.md)** - How we handle production failures
+
+### Quick Links
+
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Payment Lifecycle](#payment-lifecycle)
+- [Testing](#testing)
 
 ## Why AegisPay?
 
 ### For Merchants
+
 - **Reliability**: Built-in retry logic and circuit breakers ensure high payment success rates
 - **Cost Optimization**: Intelligent routing to minimize transaction fees
 - **No Vendor Lock-in**: Switch or combine payment gateways without code changes
 - **Audit Trail**: Complete event history for compliance and debugging
+- **No Lost Revenue**: Crash recovery ensures no payments are lost
 
 ### For Developers
+
 - **Type Safe**: Written in TypeScript with comprehensive type definitions
-- **Testable**: Pure domain logic separated from infrastructure
+- **Testable**: Pure domain logic separated from infrastructure (FP design)
 - **Observable**: Built-in logging and metrics for monitoring
-- **Documented**: Extensive documentation and examples
+- **Documented**: Extensive documentation and production-tested patterns
+- **No Race Conditions**: Distributed locking handles concurrent requests safely
 
 ## Architecture
 
-AegisPay follows a clean layered architecture:
+AegisPay follows a clean layered architecture with functional programming principles:
 
 ```
 ┌─────────────────────────────────────┐
@@ -77,24 +112,24 @@ import { AegisPay, Currency, PaymentMethodType, GatewayType } from 'aegispay';
 // 1. Initialize SDK
 const aegisPay = new AegisPay({
   routing: {
-    strategy: RoutingStrategy.HIGHEST_SUCCESS_RATE
+    strategy: RoutingStrategy.HIGHEST_SUCCESS_RATE,
   },
   retry: {
     maxRetries: 3,
-    initialDelayMs: 1000
-  }
+    initialDelayMs: 1000,
+  },
 });
 
 // 2. Register payment gateways
 aegisPay.registerGateway(GatewayType.MOCK, {
   apiKey: 'your_api_key',
-  apiSecret: 'your_api_secret'
+  apiSecret: 'your_api_secret',
 });
 
 // 3. Create a payment (idempotent)
 const payment = await aegisPay.createPayment({
   idempotencyKey: 'order_123_payment',
-  amount: 100.00,
+  amount: 100.0,
   currency: Currency.USD,
   paymentMethod: {
     type: PaymentMethodType.CARD,
@@ -103,19 +138,19 @@ const payment = await aegisPay.createPayment({
       expiryMonth: '12',
       expiryYear: '2025',
       cvv: '123',
-      cardHolderName: 'John Doe'
-    }
+      cardHolderName: 'John Doe',
+    },
   },
   customer: {
     id: 'cust_123',
     email: 'john.doe@example.com',
-    name: 'John Doe'
-  }
+    name: 'John Doe',
+  },
 });
 
 // 4. Process the payment
 const result = await aegisPay.processPayment({
-  paymentId: payment.id
+  paymentId: payment.id,
 });
 
 // 5. Check result
@@ -151,16 +186,16 @@ Route payments intelligently based on various factors:
 ```typescript
 // Strategy: Highest success rate
 const aegisPay = new AegisPay({
-  routing: { strategy: RoutingStrategy.HIGHEST_SUCCESS_RATE }
+  routing: { strategy: RoutingStrategy.HIGHEST_SUCCESS_RATE },
 });
 
 // Strategy: Cost optimization
 const aegisPay = new AegisPay({
   routing: { strategy: RoutingStrategy.COST_OPTIMIZED },
   gatewayCosts: [
-    { gatewayType: GatewayType.STRIPE, fixedFee: 0.30, percentageFee: 2.9 },
-    { gatewayType: GatewayType.PAYPAL, fixedFee: 0.49, percentageFee: 3.49 }
-  ]
+    { gatewayType: GatewayType.STRIPE, fixedFee: 0.3, percentageFee: 2.9 },
+    { gatewayType: GatewayType.PAYPAL, fixedFee: 0.49, percentageFee: 3.49 },
+  ],
 });
 
 // Strategy: Custom rules
@@ -173,10 +208,10 @@ const aegisPay = new AegisPay({
         priority: 10,
         conditions: [{ field: 'amount', operator: 'greaterThan', value: 1000 }],
         gatewayType: GatewayType.STRIPE,
-        enabled: true
-      }
-    ]
-  }
+        enabled: true,
+      },
+    ],
+  },
 });
 ```
 
@@ -244,13 +279,13 @@ Strict state transitions prevent invalid payment states:
 
 ```typescript
 // Valid transitions
-payment.authenticate()      // INITIATED → AUTHENTICATED
-payment.startProcessing()   // AUTHENTICATED → PROCESSING
-payment.markSuccess()       // PROCESSING → SUCCESS
-payment.markFailure()       // PROCESSING → FAILURE
+payment.authenticate(); // INITIATED → AUTHENTICATED
+payment.startProcessing(); // AUTHENTICATED → PROCESSING
+payment.markSuccess(); // PROCESSING → SUCCESS
+payment.markFailure(); // PROCESSING → FAILURE
 
 // Invalid transition throws error
-payment.markSuccess()       // INITIATED → SUCCESS ❌ Error!
+payment.markSuccess(); // INITIATED → SUCCESS ❌ Error!
 ```
 
 ### Gateway Registry
@@ -264,7 +299,7 @@ registry.register(GatewayType.RAZORPAY, razorpayGateway);
 
 // Track metrics
 const metrics = registry.getMetrics(GatewayType.STRIPE);
-console.log(metrics.successRate);  // 98.5%
+console.log(metrics.successRate); // 98.5%
 console.log(metrics.averageLatency); // 245ms
 ```
 
@@ -277,7 +312,7 @@ Built-in logging and metrics:
 logger.info('Payment created', {
   paymentId: payment.id,
   amount: payment.amount,
-  duration: 150
+  duration: 150,
 });
 
 // Metrics collection
@@ -295,12 +330,24 @@ console.log(snapshot.counters['payment.created']); // 1523
 
 ```typescript
 class StripeGateway implements PaymentGateway {
-  async initiate(payment: Payment) { /* ... */ }
-  async authenticate(payment: Payment) { /* ... */ }
-  async process(payment: Payment) { /* ... */ }
-  async refund(payment: Payment) { /* ... */ }
-  async getStatus(txnId: string) { /* ... */ }
-  async healthCheck() { /* ... */ }
+  async initiate(payment: Payment) {
+    /* ... */
+  }
+  async authenticate(payment: Payment) {
+    /* ... */
+  }
+  async process(payment: Payment) {
+    /* ... */
+  }
+  async refund(payment: Payment) {
+    /* ... */
+  }
+  async getStatus(txnId: string) {
+    /* ... */
+  }
+  async healthCheck() {
+    /* ... */
+  }
 }
 
 // Register

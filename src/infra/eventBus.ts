@@ -113,16 +113,20 @@ export class ConsoleEventBus implements EventBus {
   }
 
   async subscribe(
-    _eventType: string,
-    _handler: (event: PaymentEvent) => Promise<void>
+    eventType: string,
+    handler: (event: PaymentEvent) => Promise<void>
   ): Promise<void> {
+    void eventType; // Satisfy type system
+    void handler; // Satisfy type system
     console.warn('ConsoleEventBus does not support subscriptions');
   }
 
   async unsubscribe(
-    _eventType: string,
-    _handler: (event: PaymentEvent) => Promise<void>
+    eventType: string,
+    handler: (event: PaymentEvent) => Promise<void>
   ): Promise<void> {
+    void eventType; // Satisfy type system
+    void handler; // Satisfy type system
     // No-op
   }
 

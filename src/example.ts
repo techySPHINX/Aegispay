@@ -10,7 +10,7 @@ import {
   RoutingStrategy,
 } from './index';
 
-async function main() {
+async function main(): Promise<void> {
   // Initialize SDK with configuration
   const aegisPay = new AegisPay({
     routing: {

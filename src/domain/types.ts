@@ -212,11 +212,13 @@ export class Failure<E> {
 
   constructor(readonly error: E) { }
 
-  map<U>(_fn: (value: never) => U): Result<U, E> {
+  map<U>(fn: (value: never) => U): Result<U, E> {
+    void fn; // Satisfy type system
     return this as unknown as Result<U, E>;
   }
 
-  flatMap<U>(_fn: (value: never) => Result<U, E>): Result<U, E> {
+  flatMap<U>(fn: (value: never) => Result<U, E>): Result<U, E> {
+    void fn; // Satisfy type system
     return this as unknown as Result<U, E>;
   }
 }
