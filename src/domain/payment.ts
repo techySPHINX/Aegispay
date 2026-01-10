@@ -6,10 +6,13 @@ import {
   PaymentMetadata,
   GatewayType,
 } from './types';
+import { PaymentStateMachine } from './paymentStateMachine';
 
 /**
  * Payment aggregate root - represents the core payment entity
  * This is an immutable domain model following DDD principles
+ * 
+ * All state transitions are validated through the formal state machine
  */
 export class Payment {
   readonly id: string;
@@ -79,49 +82,41 @@ export class Payment {
 
   /**
    * Transition to AUTHENTICATED state
+   * Uses formal state machine validation
    */
   authenticate(gatewayType: GatewayType): Payment {
-    if (this.state !== PaymentState.INITIATED) {
-      throw new Error(
-        `Invalid state transition: Cannot authenticate from ${this.state} state`
-      );
-    }
+    // Validate transition using formal state machine
+    PaymentStateMachine.validateTransition(this.state, PaymentState.AUTHENTICATED);
     return this.withUpdates({ state: PaymentState.AUTHENTICATED, gatewayType });
   }
 
   /**
    * Transition to PROCESSING state
+   * Uses formal state machine validation
    */
   startProcessing(gatewayTransactionId: string): Payment {
-    if (this.state !== PaymentState.AUTHENTICATED) {
-      throw new Error(
-        `Invalid state transition: Cannot start processing from ${this.state} state`
-      );
-    }
+    // Validate transition using formal state machine
+    PaymentStateMachine.validateTransition(this.state, PaymentState.PROCESSING);
     return this.withUpdates({ state: PaymentState.PROCESSING, gatewayTransactionId });
   }
 
   /**
    * Transition to SUCCESS state
+   * Uses formal state machine validation
    */
   markSuccess(): Payment {
-    if (this.state !== PaymentState.PROCESSING) {
-      throw new Error(`Invalid state transition: Cannot succeed from ${this.state} state`);
-    }
+    // Validate transition using formal state machine
+    PaymentStateMachine.validateTransition(this.state, PaymentState.SUCCESS);
     return this.withUpdates({ state: PaymentState.SUCCESS });
   }
 
   /**
    * Transition to FAILURE state
+   * Uses formal state machine validation
    */
   markFailure(reason: string): Payment {
-    if (
-      this.state !== PaymentState.PROCESSING &&
-      this.state !== PaymentState.AUTHENTICATED &&
-      this.state !== PaymentState.INITIATED
-    ) {
-      throw new Error(`Invalid state transition: Cannot fail from ${this.state} state`);
-    }
+    // Validate transition using formal state machine
+    PaymentStateMachine.validateTransition(this.state, PaymentState.FAILURE);
     return this.withUpdates({ state: PaymentState.FAILURE, failureReason: reason });
   }
 
@@ -134,13 +129,15 @@ export class Payment {
 
   /**
    * Check if payment is in terminal state
+   * Delegates to formal state machine
    */
   isTerminal(): boolean {
-    return this.state === PaymentState.SUCCESS || this.state === PaymentState.FAILURE;
+    return PaymentStateMachine.isTerminalState(this.state);
   }
 
   /**
    * Check if payment can be retried
+   * Only FAILURE state allows retries, and only up to max retry limit
    */
   canRetry(maxRetries: number): boolean {
     return this.state === PaymentState.FAILURE && this.retryCount < maxRetries;

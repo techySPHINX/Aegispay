@@ -14,7 +14,7 @@ import { GatewayType, Money, Currency, PaymentMethod, Customer, PaymentState } f
 import { IO, Adapters } from './adapters';
 import { PaymentEventFactory } from '../domain/events';
 import { PaymentGateway } from '../gateways/gateway';
-import { CircuitBreaker } from './circuitBreaker';
+import { CircuitBreaker } from './enhancedCircuitBreaker';
 import { RetryPolicy } from './retryPolicy';
 import { GatewayError } from '../gateways/gateway';
 

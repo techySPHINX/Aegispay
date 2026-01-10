@@ -21,7 +21,7 @@ import { EventBus } from '../infra/eventBus';
 import { GatewayRegistry } from '../gateways/registry';
 import { PaymentRouter, RoutingContext } from '../orchestration/router';
 import { RetryPolicy } from '../orchestration/retryPolicy';
-import { CircuitBreaker } from '../orchestration/circuitBreaker';
+import { CircuitBreaker, CircuitBreakerHealthTracker } from '../orchestration/enhancedCircuitBreaker';
 import { Logger, MetricsCollector } from '../infra/observability';
 import { GatewayError, PaymentGateway } from '../gateways/gateway';
 import { LockManager, InMemoryLockManager, withLock } from '../infra/lockManager';
@@ -47,6 +47,7 @@ export interface ProcessPaymentRequest {
 
 export class PaymentService {
   private circuitBreakers: Map<GatewayType, CircuitBreaker> = new Map();
+  private healthTracker: CircuitBreakerHealthTracker = new CircuitBreakerHealthTracker();
   private eventVersion: Map<string, number> = new Map(); // paymentId -> version
   private lockManager: LockManager;
   private instanceId: string; // Unique ID for this service instance
@@ -372,7 +373,7 @@ export class PaymentService {
   private getCircuitBreaker(gatewayType: GatewayType): CircuitBreaker {
     let breaker = this.circuitBreakers.get(gatewayType);
     if (!breaker) {
-      breaker = new CircuitBreaker(gatewayType);
+      breaker = new CircuitBreaker(gatewayType, this.healthTracker);
       this.circuitBreakers.set(gatewayType, breaker);
     }
     return breaker;

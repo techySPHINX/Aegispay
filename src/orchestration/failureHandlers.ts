@@ -13,7 +13,16 @@
 
 import { Payment } from '../domain/payment';
 import { Result, fail } from '../domain/types';
-import { PaymentGateway, GatewayInitiateResponse, GatewayProcessResponse, GatewayAuthResponse, GatewayError, GatewayErrorCode } from '../gateways/gateway';
+import {
+  PaymentGateway,
+  GatewayInitiateResponse,
+  GatewayProcessResponse,
+  GatewayAuthResponse,
+  GatewayRefundResponse,
+  GatewayStatusResponse,
+  GatewayError,
+  GatewayErrorCode
+} from '../gateways/gateway';
 
 /**
  * Failure injection configuration for testing
@@ -49,6 +58,38 @@ export class ResilientGatewayWrapper implements PaymentGateway {
     private gateway: PaymentGateway,
     private failureConfig: FailureConfig = DEFAULT_FAILURE_CONFIG
   ) { }
+
+  get name(): string {
+    return this.gateway.name;
+  }
+
+  get type(): string {
+    return this.gateway.type;
+  }
+
+  async refund(payment: Payment, amount?: number): Promise<Result<GatewayRefundResponse, GatewayError>> {
+    try {
+      return await this.gateway.refund(payment, amount);
+    } catch (error) {
+      return this.handleFailure(error as Error, 'refund');
+    }
+  }
+
+  async getStatus(gatewayTransactionId: string): Promise<Result<GatewayStatusResponse, GatewayError>> {
+    try {
+      return await this.gateway.getStatus(gatewayTransactionId);
+    } catch (error) {
+      return this.handleFailure(error as Error, 'getStatus');
+    }
+  }
+
+  async healthCheck(): Promise<boolean> {
+    try {
+      return await this.gateway.healthCheck();
+    } catch {
+      return false;
+    }
+  }
 
   async authenticate(payment: Payment): Promise<Result<GatewayAuthResponse, GatewayError>> {
     try {
@@ -240,7 +281,10 @@ export class NetworkError extends Error {
 }
 
 export class PartialFailureError extends Error {
-  constructor(message: string, public readonly partialResponse?: GatewayResponse) {
+  constructor(
+    message: string,
+    public readonly partialResponse?: GatewayInitiateResponse | GatewayProcessResponse | GatewayAuthResponse
+  ) {
     super(message);
     this.name = 'PartialFailureError';
     Object.setPrototypeOf(this, PartialFailureError.prototype);
@@ -250,7 +294,7 @@ export class PartialFailureError extends Error {
 export class ProcessCrashError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'ProcessCrashError'; InitiateResponse | GatewayProcess
+    this.name = 'ProcessCrashError';
     Object.setPrototypeOf(this, ProcessCrashError.prototype);
   }
 }
@@ -340,7 +384,7 @@ export interface VerificationResult {
   verified: boolean;
   reason: string;
   state: 'SUCCESS' | 'FAILURE' | 'UNKNOWN';
-  response?: GatewayResponse;
+  response?: GatewayInitiateResponse | GatewayProcessResponse | GatewayAuthResponse;
 }
 
 /**

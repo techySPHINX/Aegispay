@@ -1,0 +1,41 @@
+digraph PaymentStateMachine {
+  rankdir=LR;
+  fontname="Arial";
+  node [fontname="Arial"];
+  edge [fontname="Arial"];
+  
+  // Graph styling
+  graph [
+    label="Payment State Machine\nDeterministic Finite Automaton (DFA)\n\nInvariants:\n• Terminal states have NO outgoing transitions\n• All states reachable from INITIATED\n• Transitions are deterministic and atomic"
+    fontsize=16
+    labelloc="t"
+    bgcolor="#f8f9fa"
+  ];
+  
+  // Initial state marker
+  node [shape=point, width=0.3]; start;
+  
+  // Regular states
+  node [shape=circle, style=filled, fillcolor="#e3f2fd", color="#1976d2", fontsize=12];
+  INITIATED [label="INITIATED\n(Initial)", fillcolor="#c8e6c9", color="#388e3c"];
+  AUTHENTICATED [label="AUTHENTICATED"];
+  PROCESSING [label="PROCESSING"];
+  
+  // Terminal states
+  node [shape=doublecircle, style=filled];
+  SUCCESS [label="SUCCESS\n(Terminal)", fillcolor="#c8e6c9", color="#2e7d32"];
+  FAILURE [label="FAILURE\n(Terminal)", fillcolor="#ffcdd2", color="#c62828"];
+  
+  // Transitions
+  edge [color="#424242", fontsize=10];
+  start -> INITIATED [label=" start"];
+  
+  INITIATED -> AUTHENTICATED [label=" authenticate()"];
+  INITIATED -> FAILURE [label=" fail()", color="#d32f2f"];
+  
+  AUTHENTICATED -> PROCESSING [label=" startProcessing()"];
+  AUTHENTICATED -> FAILURE [label=" fail()", color="#d32f2f"];
+  
+  PROCESSING -> SUCCESS [label=" markSuccess()", color="#388e3c"];
+  PROCESSING -> FAILURE [label=" fail()", color="#d32f2f"];
+}

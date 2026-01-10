@@ -15,10 +15,6 @@ import { Payment } from '../domain/payment';
 import { PaymentEvent, EventType } from '../domain/events';
 import { PaymentState } from '../domain/types';
 
-// Helper to extract common properties from event union type
-type ExtractEventData<T> = T extends { payload: { paymentId: string } } ? T : never;
-type EventPayload = ExtractEventData<PaymentEvent>['payload'];
-
 /**
  * Event Store interface
  * In production, this would be backed by a durable event store like:
@@ -195,7 +191,6 @@ export class EventSourcingCoordinator {
     // In a more complex system, you would fold over all events
     // to compute the current state
     const latestEvent = sortedEvents[sortedEvents.length - 1];
-    const reconstructedPayment = latestEvent.data;
 
     // Reconstruct payment from latest event
     // Note: In production, store full payment snapshot or rebuild from all events
@@ -219,8 +214,12 @@ export class EventSourcingCoordinator {
     // 2. Rebuild by folding over all events
     // 3. Query the repository as fallback
 
-    // For now, throaggregateIrror indicating this needs implementation
-    throw new Error(`Payment reconstruction from events not fully implemented. Event: ${event.eventType}`)
+    // For now, throw error indicating this needs implementation
+    throw new Error(
+      `Payment reconstruction from events not fully implemented for event type: ${event.eventType}. ` +
+      'In production, store payment snapshots in events or query repository.'
+    );
+  }
 
   /**
    * Verify event continuity
@@ -235,7 +234,7 @@ export class EventSourcingCoordinator {
 
       if (actualVersion !== expectedVersion) {
         throw new EventContinuityError(
-          events[i].data.id,
+          events[i].aggregateId,
           expectedVersion,
           actualVersion
         );
@@ -306,18 +305,23 @@ export class EventSourcingCoordinator {
       return report;
     } catch (error) {
       this.logger.error('Crash recovery failed', error as Error);
-      throw error; aggregateId;
-      const events = paymentEvents.get(paymentId) || [];
-      events.push(event);
-      paymentEvents.set(paymentId, events);
+      throw error;
     }
+  }
 
-    // Check each payment's latest state
-    for (const events of paymentEvents.values()) {
-      const sortedEvents = events.sort((a, b) => a.version - b.version);
-      // Note: Without full payment data in events, we can't determine terminal state
-      // This is a limitation of the current simplified implementation (const event of allEvents) {
-      const paymentId = event.data.id;
+  /**
+   * Find payments that are in-flight (not in terminal state)
+   */
+  private async findInFlightPayments(): Promise<Payment[]> {
+    const inFlightPayments: Payment[] = [];
+
+    // Get all events
+    const allEvents = await this.eventStore.getEventsByType(EventType.PAYMENT_INITIATED);
+
+    // Group events by payment
+    const paymentEvents = new Map<string, PaymentEvent[]>();
+    for (const event of allEvents) {
+      const paymentId = event.aggregateId;
       const events = paymentEvents.get(paymentId) || [];
       events.push(event);
       paymentEvents.set(paymentId, events);
@@ -325,13 +329,27 @@ export class EventSourcingCoordinator {
 
     // Check each payment's latest state
     for (const [paymentId, events] of paymentEvents.entries()) {
-      const sortedEvents = events.sort((a, b) => a.version - b.version);
-      const latestEvent = sortedEvents[sortedEvents.length - 1];
-      const payment = latestEvent.data;
+      try {
+        const sortedEvents = events.sort((a, b) => a.version - b.version);
+        const latestEvent = sortedEvents[sortedEvents.length - 1];
 
-      // If payment is not in terminal state, it's in-flight
-      if (!payment.isTerminal()) {
-        inFlightPayments.push(payment);
+        // Check if payment is in terminal state
+        // Terminal states: SUCCESS, FAILURE
+        const isTerminal =
+          latestEvent.eventType === EventType.PAYMENT_SUCCEEDED ||
+          latestEvent.eventType === EventType.PAYMENT_FAILED;
+
+        if (!isTerminal) {
+          // Payment is in-flight - reconstruct it
+          const payment = await this.reconstructPaymentState(paymentId);
+          if (payment) {
+            inFlightPayments.push(payment);
+          }
+        }
+      } catch (error) {
+        this.logger.error('Error checking payment state', error as Error, {
+          paymentId,
+        });
       }
     }
 
@@ -351,94 +369,105 @@ export class EventSourcingCoordinator {
     }
 
     const sortedEvents = events.sort((a, b) => a.version - b.version);
+    const latestEvent = sortedEvents[sortedEvents.length - 1];
+
+    // Determine current state from latest event
+    let currentState = PaymentState.INITIATED;
+    switch (latestEvent.eventType) {
+      case EventType.PAYMENT_INITIATED:
+        currentState = PaymentState.INITIATED;
+        break;
+      case EventType.PAYMENT_AUTHENTICATED:
+        currentState = PaymentState.AUTHENTICATED;
+        break;
+      case EventType.PAYMENT_PROCESSING:
+        currentState = PaymentState.PROCESSING;
+        break;
+      case EventType.PAYMENT_SUCCEEDED:
+        currentState = PaymentState.SUCCESS;
+        break;
+      case EventType.PAYMENT_FAILED:
+        currentState = PaymentState.FAILURE;
+        break;
+    }
 
     return {
       paymentId,
-      currentState: sortedEvents[sortedEvents.length - 1].data.state,
+      currentState,
       eventCount: sortedEvents.length,
       events: sortedEvents.map((e) => ({
-        // Note: This is simplified - full implementation would extract state from events
-        return {
-          paymentId,
-          currentState: PaymentState.INITIATED, // Placeholder
-          eventCount: sortedEvents.length,
-          events: sortedEvents.map((e) => ({
-            version: e.version,
-            type: e.eventType,
-            state: PaymentState.INITIATED, // Placeholder
-          }
+        version: e.version,
+        type: e.eventType,
+        state: currentState,
+        timestamp: e.timestamp,
+      })),
+      createdAt: sortedEvents[0].timestamp,
+      lastUpdatedAt: latestEvent.timestamp,
+    };
+  }
 }
 
 /**
  * Crash recovery report
  */
 export interface CrashRecoveryReport {
-        totalPayments: number;
-        inFlightPayments: number;
-        recoveredPayments: Array<{
-          paymentId: string;
-          state: PaymentState;
-          recoveredAt: Date;
-        }>;
-        failedRecoveries: Array<{
-          paymentId: string;
-          error: string;
-        }>;
-      }
+  totalPayments: number;
+  inFlightPayments: number;
+  recoveredPayments: Array<{
+    paymentId: string;
+    state: PaymentState;
+    recoveredAt: Date;
+  }>;
+  failedRecoveries: Array<{
+    paymentId: string;
+    error: string;
+  }>;
+}
 
 /**
  * Payment history
  */
 export interface PaymentHistory {
-      paymentId: string;
-      currentState: PaymentState;
-      eventCount: number;
-      events: Array<{
-        version: number;
-        type: PaymentEventType;
-        state: PaymentState;
-        timestamp: Date;
-      }>;
-      createdA;
-      lastUpdatedAt: Date;
-    }
+  paymentId: string;
+  currentState: PaymentState;
+  eventCount: number;
+  events: Array<{
+    version: number;
+    type: EventType;
+    state: PaymentState;
+    timestamp: Date;
+  }>;
+  createdAt: Date;
+  lastUpdatedAt: Date;
+}
 
-    /**
-     * Custom errors
-     */
-    export class EventVersionMismatchError extends Error {
-      constructor(
-        public readonly paymentId: string,
-        public readonly expectedVersion: number,
-        public readonly actualVersion: number
-      ) {
-        super(
-          `Event version mismatch for payment ${paymentId}: expected ${expectedVersion}, got ${actualVersion}`
-        );
-        this.name = 'EventVersionMismatchError';
-        Object.setPrototypeOf(this, EventVersionMismatchError.prototype);
-      }
-    }
+/**
+ * Custom errors
+ */
+export class EventVersionMismatchError extends Error {
+  constructor(
+    public readonly paymentId: string,
+    public readonly expectedVersion: number,
+    public readonly actualVersion: number
+  ) {
+    super(
+      `Event version mismatch for payment ${paymentId}: expected ${expectedVersion}, got ${actualVersion}`
+    );
+    this.name = 'EventVersionMismatchError';
+    Object.setPrototypeOf(this, EventVersionMismatchError.prototype);
+  }
+}
 
-    export class EventContinuityError extends Error {
-      constructor(
-        public readonly paymentId: string,
-        public readonly expectedVersion: number,
-        public readonly actualVersion: number
-      ) {
-        super(
-          `Event continuity error for payment ${paymentId}: expected version ${expectedVersion}, got ${actualVersion}`
-        );
-        this.name = 'EventContinuityError';
-        Object.setPrototypeOf(this, EventContinuityError.prototype);
-      }
-    }
-
-    /**
-     * Extension method to get all events from InMemoryEventStore
-     */
-    declare module './eventSourcing' {
-      interface InMemoryEventStore {
-        getAllEvents(): PaymentEvent[];
-      }
-    }
+export class EventContinuityError extends Error {
+  constructor(
+    public readonly paymentId: string,
+    public readonly expectedVersion: number,
+    public readonly actualVersion: number
+  ) {
+    super(
+      `Event continuity error for payment ${paymentId}: expected version ${expectedVersion}, got ${actualVersion}`
+    );
+    this.name = 'EventContinuityError';
+    Object.setPrototypeOf(this, EventContinuityError.prototype);
+  }
+}

@@ -170,5 +170,27 @@ export * from './domain/paymentStateMachine';
 export * from './domain/events';
 export * from './gateways/gateway';
 export * from './orchestration/router';
+export * from './orchestration/enhancedCircuitBreaker';
+export {
+  GatewayMetricsCollector,
+  MetricsSnapshot,
+  IntelligentRoutingEngine,
+  ScoringWeights,
+  DEFAULT_WEIGHTS,
+  createHighValueRule,
+  createLowLatencyRule,
+  createCostOptimizationRule
+} from './orchestration/intelligentRouting';
+export * from './orchestration/chaosEngineering';
+export {
+  HookRegistry,
+  HookExecutor,
+  HighValueFraudCheck,
+  GeographicFraudCheck,
+  PaymentLoggingListener
+} from './orchestration/hooks';
+export * from './infra/optimisticLocking';
+export * from './infra/idempotency';
+export * from './infra/transactionalOutbox';
 export * from './config/config';
 export type { CreatePaymentRequest, ProcessPaymentRequest };

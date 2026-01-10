@@ -7,34 +7,67 @@ A production-grade payment orchestration SDK designed for high-volume payment tr
 
 ## Features
 
-- 🔒 **Concurrency-Safe**: Distributed locking prevents race conditions and duplicate payments
-- 🔄 **State Machine**: Strict payment lifecycle management with validated transitions
+### Core Correctness & Reliability
+
+- 🔒 **Concurrency-Safe**: Distributed locking + optimistic locking prevents race conditions and lost updates
+- 🎯 **Formal State Machine**: Deterministic finite automaton with mathematically proven invariants
+- 🔄 **Type-Safe Transitions**: Compile-time and runtime validation of state changes
 - 🛡️ **Crash Recovery**: Event sourcing ensures correctness even after process crashes
+- 📦 **Exactly-Once Semantics**: Transactional outbox pattern for guaranteed event delivery
+- 🔢 **Version Control**: Optimistic locking with automatic conflict resolution and retry
+
+### Advanced Orchestration
+
+- 🧠 **Intelligent Routing**: Real-time metrics-based gateway selection (success rate, latency, cost)
+- 🔌 **Circuit Breakers**: Health tracking with CLOSED/OPEN/HALF_OPEN states for cascading failure prevention
+- 🎲 **Chaos Engineering**: Built-in failure injection for resilience testing
+- 🔄 **Adaptive Retry**: Exponential backoff with jitter and configurable policies
+- 📊 **Health Monitoring**: Comprehensive gateway health scoring and tracking
+
+### Integration & Extensibility
+
 - 🌐 **Gateway Agnostic**: Pluggable payment gateway integration (Stripe, Razorpay, PayPal, etc.)
-- 🔁 **Fault Tolerance**: Circuit breakers, exponential backoff retries, and timeout handling
-- 📊 **Event-Driven**: Complete audit trail with event sourcing
-- 🎯 **Smart Routing**: Route payments based on success rate, latency, cost, or custom rules
+- 🧩 **Extensibility Hooks**: Plugin architecture for fraud checks, custom routing, and validation
 - 📈 **Observable**: Structured logging, metrics collection, and tracing-friendly design
-- 🧩 **Extensible**: Add custom gateways, validators, fraud checks, and routing strategies
-- 💪 **Production Ready**: Handles network failures, partial failures, and process crashes
+- 🎯 **Event-Driven**: Complete audit trail with event sourcing
 - 🏗️ **Functional Design**: Pure business logic with isolated side effects for maximum testability
 
 ## 🚀 Production Reliability
 
 AegisPay is built for mission-critical payment workloads:
 
+### Correctness Guarantees
+
 - **Zero Duplicate Payments**: Idempotency + distributed locking ensures at-most-once processing
+- **Formal Verification**: State machine with proven invariants prevents inconsistent states
+- **Linearizable Operations**: Compare-and-swap + optimistic locking ensure atomic state transitions
+- **Exactly-Once Events**: Transactional outbox pattern guarantees event delivery without duplicates
+- **No Lost Updates**: Version-based optimistic locking prevents race conditions
+
+### Reliability Features
+
 - **Crash Recovery**: Event sourcing allows state reconstruction after crashes
 - **Partial Failure Handling**: Gateway verification prevents double-charging
-- **Timeout Resilience**: Automatic retry with exponential backoff
-- **Network Resilience**: Circuit breakers prevent cascading failures
+- **Intelligent Routing**: Metrics-based gateway selection optimizes for success rate and latency
+- **Circuit Breakers**: Automatic failure detection with gradual recovery (CLOSED → OPEN → HALF_OPEN)
+- **Health Tracking**: Real-time gateway health scoring (0.0-1.0) based on multiple factors
+- **Chaos Testing**: Built-in failure injection validates resilience before production
 
-**Read more**: [Production Reliability Guide](docs/PRODUCTION_RELIABILITY.md)
+### Extensibility
+
+- **Hook System**: Pre/post validation, fraud checks, custom routing, event listeners
+- **Plugin Architecture**: Add custom logic without modifying core code
+- **Metrics Integration**: Custom metrics collectors for monitoring platforms
+
+**Read more**: [Production Reliability Guide](docs/PRODUCTION_RELIABILITY.md) | [Advanced Features](docs/ADVANCED_FEATURES.md)
 
 ## 📚 Documentation
 
 ### Core Concepts
 
+- **[State Machine & Concurrency](docs/STATE_MACHINE_AND_CONCURRENCY.md)** - Formal state machine with concurrency safety proofs
+- **[Transactional Outbox](docs/TRANSACTIONAL_OUTBOX.md)** - Exactly-once event delivery guarantees
+- **[Advanced Features](docs/ADVANCED_FEATURES.md)** - Intelligent routing, circuit breakers, optimistic locking, chaos testing, hooks
 - **[Production Reliability](docs/PRODUCTION_RELIABILITY.md)** - Comprehensive guide to scale, reliability, and correctness guarantees
 - **[Concurrency & Idempotency](docs/CONCURRENCY.md)** - Deep dive into distributed locking and concurrent request handling
 - **[Functional Programming](docs/FUNCTIONAL_PROGRAMMING.md)** - Pure orchestration with IO monads and adapters
