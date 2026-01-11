@@ -51,7 +51,7 @@ class VIPCustomerFraudCheck implements FraudCheckHook {
 
   async execute(context: HookContext) {
     const isVIP = context.metadata.customerType === 'VIP';
-    
+
     if (isVIP) {
       console.log(`✓ VIP customer - fraud check bypassed`);
       return {
@@ -76,7 +76,7 @@ class CostOptimizedRouting implements RoutingStrategyHook {
 
   async execute(context: any) {
     const amount = context.payment.amount.amount;
-    
+
     // Route small payments to cheaper gateway
     if (amount < 50) {
       return {
@@ -454,7 +454,7 @@ if (require.main === module) {
     await demoNoCodeHooks();
     demoMarketplaceHooks();
     demonstrateCoreIntegrity();
-    
+
     console.log('\n\n=== SUMMARY ===\n');
     console.log(`
 SDK EXTENSIBILITY ENABLES:

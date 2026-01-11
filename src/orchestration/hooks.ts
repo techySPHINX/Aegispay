@@ -308,7 +308,7 @@ export class HookFactory {
         for (const rule of config.rules) {
           // Simple rule evaluation (in production, use a proper rules engine)
           const shouldApplyRule = HookFactory.evaluateCondition(rule.condition, context);
-          
+
           if (shouldApplyRule) {
             if (rule.block) {
               return {
@@ -320,7 +320,7 @@ export class HookFactory {
             }
           }
         }
-        
+
         return { allowed: true, riskScore: 0 };
       },
     };
@@ -346,7 +346,7 @@ export class HookFactory {
       execute: async (context: RoutingContext): Promise<RoutingDecision> => {
         for (const rule of config.rules) {
           const shouldApplyRule = HookFactory.evaluateCondition(rule.condition, context);
-          
+
           if (shouldApplyRule) {
             return {
               gatewayType: rule.gateway,
@@ -356,7 +356,7 @@ export class HookFactory {
             };
           }
         }
-        
+
         // Default fallback
         return {
           gatewayType: GatewayType.STRIPE,
@@ -386,7 +386,7 @@ export class HookFactory {
       enabled: true,
       execute: async (context: HookContext): Promise<ValidationResult> => {
         const errors: string[] = [];
-        
+
         for (const check of config.checks) {
           const fieldValue = HookFactory.getFieldValue(context, check.field);
           const isValid = HookFactory.compareValues(
@@ -394,12 +394,12 @@ export class HookFactory {
             check.operator,
             check.value
           );
-          
+
           if (!isValid) {
             errors.push(check.errorMessage);
           }
         }
-        
+
         return {
           valid: errors.length === 0,
           errors: errors.length > 0 ? errors : undefined,
@@ -420,11 +420,11 @@ export class HookFactory {
       // Extract field and comparison
       const match = condition.match(/(\w+\.?\w*)\s*(>|<|>=|<=|=|!=)\s*(.+)/);
       if (!match) return false;
-      
+
       const [, field, operator, value] = match;
       const fieldValue = HookFactory.getFieldValue(context, field);
       const compareValue = value.replace(/['"]/g, '');
-      
+
       switch (operator) {
         case '>': return Number(fieldValue) > Number(compareValue);
         case '<': return Number(fieldValue) < Number(compareValue);
@@ -445,7 +445,7 @@ export class HookFactory {
   private static getFieldValue(context: any, field: string): unknown {
     const parts = field.split('.');
     let value: any = context;
-    
+
     for (const part of parts) {
       if (value && typeof value === 'object' && part in value) {
         value = value[part];
@@ -453,7 +453,7 @@ export class HookFactory {
         return undefined;
       }
     }
-    
+
     return value;
   }
 
