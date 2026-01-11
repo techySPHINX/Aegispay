@@ -10,6 +10,16 @@ import {
   Result,
   GatewayType,
 } from '../domain/types';
+import {
+  validateAmount,
+  validateCurrency,
+  validateIdempotencyKey,
+  validateCustomer,
+  validatePaymentMethod,
+  validatePaymentId,
+  sanitizeMetadata,
+  ValidationError as InputValidationError,
+} from '../infra/validation';
 
 // UUID generator function
 function generateId(): string {
@@ -68,6 +78,7 @@ export class PaymentService {
 
   /**
    * Create a new payment (Idempotent)
+   * Includes comprehensive input validation
    */
   async createPayment(
     request: CreatePaymentRequest
@@ -75,6 +86,62 @@ export class PaymentService {
     const startTime = Date.now();
 
     try {
+      // PRODUCTION: Comprehensive Input Validation
+      const validationErrors: InputValidationError[] = [];
+
+      // Validate idempotency key
+      const idempKeyValidation = validateIdempotencyKey(request.idempotencyKey);
+      if (!idempKeyValidation.valid) {
+        validationErrors.push(...idempKeyValidation.errors);
+      }
+
+      // Validate amount
+      const amountValidation = validateAmount(request.amount);
+      if (!amountValidation.valid) {
+        validationErrors.push(...amountValidation.errors);
+      }
+
+      // Validate currency
+      const currencyValidation = validateCurrency(request.currency);
+      if (!currencyValidation.valid) {
+        validationErrors.push(...currencyValidation.errors);
+      }
+
+      // Validate customer
+      const customerValidation = validateCustomer(request.customer);
+      if (!customerValidation.valid) {
+        validationErrors.push(...customerValidation.errors);
+      }
+
+      // Validate payment method
+      const pmValidation = validatePaymentMethod(request.paymentMethod);
+      if (!pmValidation.valid) {
+        validationErrors.push(...pmValidation.errors);
+      }
+
+      // If any validation errors, return early
+      if (validationErrors.length > 0) {
+        const errorMessage = validationErrors
+          .map((e) => `${e.field}: ${e.message}`)
+          .join('; ');
+
+        this.logger.warn('Payment creation validation failed', {
+          errors: validationErrors,
+          idempotencyKey: request.idempotencyKey,
+        });
+
+        this.metrics.increment('payment.validation_failed', {
+          errorCount: validationErrors.length.toString(),
+        });
+
+        return fail(new Error(`Validation failed: ${errorMessage}`));
+      }
+
+      // Sanitize metadata
+      const sanitizedMetadata = request.metadata
+        ? sanitizeMetadata(request.metadata)
+        : {};
+
       // Use lock to prevent concurrent creates with same idempotency key
       return await withLock(
         this.lockManager,
@@ -104,7 +171,7 @@ export class PaymentService {
             amount: new Money(request.amount, request.currency),
             paymentMethod: request.paymentMethod,
             customer: request.customer,
-            metadata: request.metadata || {},
+            metadata: sanitizedMetadata,
           });
 
           // Save payment
@@ -144,6 +211,7 @@ export class PaymentService {
 
   /**
    * Process a payment through the orchestration flow
+   * Includes production-ready error handling and validation
    */
   async processPayment(
     request: ProcessPaymentRequest
@@ -151,6 +219,21 @@ export class PaymentService {
     const startTime = Date.now();
 
     try {
+      // PRODUCTION: Validate payment ID
+      const idValidation = validatePaymentId(request.paymentId);
+      if (!idValidation.valid) {
+        const errorMessage = idValidation.errors
+          .map((e) => e.message)
+          .join('; ');
+
+        this.logger.warn('Invalid payment ID', {
+          paymentId: request.paymentId,
+          errors: idValidation.errors,
+        });
+
+        this.metrics.increment('payment.invalid_id');
+        return fail(new Error(`Invalid payment ID: ${errorMessage}`));
+      }
       // Lock payment processing to prevent concurrent processing
       return await withLock(
         this.lockManager,

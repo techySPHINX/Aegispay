@@ -29,17 +29,16 @@
 import {
   HookRegistry,
   HookExecutor,
-  HookFactory,
   FraudCheckHook,
   RoutingStrategyHook,
-  PrePaymentValidationHook,
   EventListenerHook,
   LifecycleHook,
   HookContext,
+  RoutingContext,
 } from '../orchestration/hooks';
-import { Payment, PaymentStatus } from '../domain/payment';
-import { GatewayType, Money } from '../domain/types';
-import { DomainEvent } from '../domain/events';
+import { Payment } from '../domain/payment';
+import { GatewayType, Money, Currency, PaymentState, PaymentMethodType } from '../domain/types';
+import { DomainEvent, EventType } from '../domain/events';
 
 /**
  * EXAMPLE 1: Custom Fraud Check (Code-Based)
@@ -49,7 +48,9 @@ class VIPCustomerFraudCheck implements FraudCheckHook {
   priority = 100;
   enabled = true;
 
-  async execute(context: HookContext) {
+  async execute(context: HookContext): Promise<
+    | { allowed: boolean; riskScore: number; reason?: string; metadata?: Record<string, unknown> }
+  > {
     const isVIP = context.metadata.customerType === 'VIP';
 
     if (isVIP) {
@@ -74,7 +75,7 @@ class CostOptimizedRouting implements RoutingStrategyHook {
   priority = 90;
   enabled = true;
 
-  async execute(context: any) {
+  async execute(context: HookContext): Promise<{ gatewayType: GatewayType; confidence: number; reason: string; metadata?: Record<string, unknown> }> {
     const amount = context.payment.amount.amount;
 
     // Route small payments to cheaper gateway
@@ -114,7 +115,7 @@ class SlackNotificationListener implements EventListenerHook {
   enabled = true;
   eventTypes = ['PaymentFailed', 'PaymentRefunded'];
 
-  async execute(event: DomainEvent, context: HookContext) {
+  async execute(event: DomainEvent, context: HookContext): Promise<void> {
     console.log(`📱 Slack notification: ${event.eventType} for payment ${context.payment.id}`);
     // In production: await slack.sendMessage(...)
   }
@@ -130,7 +131,7 @@ class AuditLogLifecycle implements LifecycleHook {
   operation = 'process_payment';
   stage: 'before' | 'after' = 'after';
 
-  async execute(context: HookContext) {
+  async execute(context: HookContext): Promise<void> {
     console.log(`📝 Audit log: Payment ${context.payment.id} processed`);
     // In production: await auditLog.write(...)
   }
@@ -139,7 +140,7 @@ class AuditLogLifecycle implements LifecycleHook {
 /**
  * DEMO: Code-Based Hooks
  */
-async function demoCodeBasedHooks() {
+async function demoCodeBasedHooks(): Promise<void> {
   console.log('\n=== CODE-BASED HOOKS DEMO ===\n');
 
   const registry = new HookRegistry();
@@ -152,12 +153,15 @@ async function demoCodeBasedHooks() {
   registry.registerLifecycleHook(new AuditLogLifecycle());
 
   // Create test payment
-  const payment = new Payment(
-    'pay_001',
-    'cust_vip',
-    new Money(2500, 'USD'),
-    GatewayType.STRIPE
-  );
+  const payment = new Payment({
+    id: 'pay_001',
+    idempotencyKey: 'idem_001',
+    state: PaymentState.INITIATED,
+    amount: new Money(2500, Currency.USD),
+    paymentMethod: { type: PaymentMethodType.CARD, details: { cardNumber: '****', expiryMonth: '12', expiryYear: '25', cvv: '***', cardHolderName: 'VIP Customer' } },
+    customer: { id: 'cust_vip', email: 'vip@example.com' },
+    gatewayType: GatewayType.STRIPE,
+  });
 
   const context: HookContext = {
     payment,
@@ -176,7 +180,7 @@ async function demoCodeBasedHooks() {
 
   // Execute routing
   console.log('\nRunning routing strategy...');
-  const routingContext: any = {
+  const routingContext: RoutingContext = {
     ...context,
     availableGateways: [GatewayType.STRIPE, GatewayType.PAYPAL, GatewayType.MOCK],
     gatewayMetrics: new Map(),
@@ -188,10 +192,11 @@ async function demoCodeBasedHooks() {
   console.log('\nTriggering event listeners...');
   const event: DomainEvent = {
     eventId: 'evt_001',
-    eventType: 'PaymentFailed',
-    paymentId: 'pay_001',
+    eventType: EventType.PAYMENT_FAILED,
+    aggregateId: 'pay_001',
     timestamp: new Date(),
-    data: { reason: 'Insufficient funds' },
+    version: 1,
+    metadata: { reason: 'Insufficient funds' },
   };
   await executor.executeEventListeners(event, context);
 
@@ -206,7 +211,7 @@ async function demoCodeBasedHooks() {
 /**
  * DEMO: No-Code Hooks (Configuration-Based)
  */
-async function demoNoCodeHooks() {
+async function demoNoCodeHooks(): Promise<void> {
   console.log('\n\n=== NO-CODE HOOKS DEMO ===\n');
 
   const registry = new HookRegistry();
@@ -278,12 +283,15 @@ async function demoNoCodeHooks() {
 
   // Test with high-value payment
   console.log('Test 1: High-value payment ($15,000)');
-  const payment1 = new Payment(
-    'pay_002',
-    'cust_002',
-    new Money(15000, 'USD'),
-    GatewayType.STRIPE
-  );
+  const payment1 = new Payment({
+    id: 'pay_002',
+    idempotencyKey: 'idem_002',
+    state: PaymentState.INITIATED,
+    amount: new Money(15000, Currency.USD),
+    paymentMethod: { type: PaymentMethodType.CARD, details: { cardNumber: '****', expiryMonth: '12', expiryYear: '25', cvv: '***', cardHolderName: 'Customer 2' } },
+    customer: { id: 'cust_002', email: 'cust002@example.com' },
+    gatewayType: GatewayType.STRIPE,
+  });
 
   const context1: HookContext = {
     payment: payment1,
@@ -298,14 +306,17 @@ async function demoNoCodeHooks() {
 
   // Test with medium-value payment
   console.log('\nTest 2: Medium-value payment ($100) from US');
-  const payment2 = new Payment(
-    'pay_003',
-    'cust_003',
-    new Money(100, 'USD'),
-    GatewayType.STRIPE
-  );
+  const payment2 = new Payment({
+    id: 'pay_003',
+    idempotencyKey: 'idem_003',
+    state: PaymentState.INITIATED,
+    amount: new Money(100, Currency.USD),
+    paymentMethod: { type: PaymentMethodType.CARD, details: { cardNumber: '****', expiryMonth: '12', expiryYear: '25', cvv: '***', cardHolderName: 'Customer 3' } },
+    customer: { id: 'cust_003', email: 'cust003@example.com' },
+    gatewayType: GatewayType.STRIPE,
+  });
 
-  const context2: any = {
+  const context2: RoutingContext = {
     payment: payment2,
     timestamp: new Date(),
     requestId: 'req_003',
@@ -329,7 +340,7 @@ async function demoNoCodeHooks() {
 /**
  * DEMO: Marketplace-Style Pre-Built Hooks
  */
-function demoMarketplaceHooks() {
+function demoMarketplaceHooks(): void {
   console.log('\n\n=== MARKETPLACE HOOKS DEMO ===\n');
 
   console.log(`
@@ -404,7 +415,7 @@ EXAMPLE CONFIG (JSON):
 /**
  * Show how core logic remains untouched
  */
-function demonstrateCoreIntegrity() {
+function demonstrateCoreIntegrity(): void {
   console.log('\n\n=== CORE LOGIC INTEGRITY ===\n');
 
   console.log(`
@@ -449,7 +460,7 @@ Integration tests verify hook execution
 
 // Run all demos
 if (require.main === module) {
-  (async () => {
+  (async (): Promise<void> => {
     await demoCodeBasedHooks();
     await demoNoCodeHooks();
     demoMarketplaceHooks();

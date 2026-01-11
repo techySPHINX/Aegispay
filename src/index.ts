@@ -163,7 +163,7 @@ export class AegisPay {
   }
 }
 
-// Export types and classes
+// Export types and classes for production use
 export * from './domain/types';
 export * from './domain/payment';
 export * from './domain/paymentStateMachine';
@@ -171,6 +171,10 @@ export * from './domain/events';
 export * from './gateways/gateway';
 export * from './orchestration/router';
 export * from './orchestration/enhancedCircuitBreaker';
+export * from './infra/observability';
+export * from './infra/validation';
+export * from './infra/lockManager';
+export * from './infra/eventSourcing';
 export {
   GatewayMetricsCollector,
   MetricsSnapshot,

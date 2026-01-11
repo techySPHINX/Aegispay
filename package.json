@@ -6,11 +6,19 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
+    "build:prod": "tsc --project tsconfig.prod.json",
     "dev": "tsc --watch",
     "example": "npx ts-node src/example.ts",
     "test": "jest",
-    "lint": "eslint src/**/*.ts",
-    "format": "prettier --write \"src/**/*.ts\""
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src/**/*.ts --max-warnings 0",
+    "lint:fix": "eslint src/**/*.ts --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "typecheck": "tsc --noEmit",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run lint && npm run typecheck && npm run test"
   },
   "keywords": [
     "payment",

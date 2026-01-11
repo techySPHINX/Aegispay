@@ -129,7 +129,7 @@ export function processPaymentOrchestration(
       // Step 2: Initiate
       .flatMap((payment) => initiatePaymentStep(payment, command, adapters, getEventVersion))
       // Step 3: Process
-      .flatMap((payment) => processPaymentStep(payment, command, adapters, getEventVersion))
+      .flatMap((payment) => processPaymentStep(payment, command, adapters))
       // Step 4: Mark success
       .flatMap((payment) => markPaymentSuccess(payment, adapters, getEventVersion))
       .flatMap((payment) => {
@@ -232,8 +232,7 @@ function initiatePaymentStep(
 function processPaymentStep(
   payment: Payment,
   command: ProcessPaymentCommand,
-  adapters: Adapters,
-  getEventVersion: (paymentId: string) => number
+  adapters: Adapters
 ): IO<Payment> {
   return new IO(async () => {
     // Execute processing with retry and circuit breaker

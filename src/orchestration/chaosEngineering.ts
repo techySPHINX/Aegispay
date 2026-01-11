@@ -79,7 +79,7 @@
 
 import { PaymentGateway, GatewayInitiateResponse, GatewayAuthResponse, GatewayRefundResponse, GatewayStatusResponse } from '../gateways/gateway';
 import { Payment } from '../domain/payment';
-import { GatewayType, Result, fail } from '../domain/types';
+import { GatewayType, Result, fail, PaymentState } from '../domain/types';
 import { GatewayError, GatewayErrorCode, GatewayProcessResponse } from '../gateways/gateway';
 
 // ============================================================================
@@ -645,41 +645,16 @@ export class ChaosAssertions {
   /**
    * Assert state machine is in valid state
    */
-  static assertValidState(payment: Payment, message?: string): void {
-    const validTransitions: Record<PaymentStatus, PaymentStatus[]> = {
-      [PaymentStatus.PENDING]: [
-        PaymentStatus.INITIATED,
-        PaymentStatus.FAILED,
-        PaymentStatus.CANCELLED,
-      ],
-      [PaymentStatus.INITIATED]: [
-        PaymentStatus.AUTHORIZED,
-        PaymentStatus.FAILED,
-        PaymentStatus.CANCELLED,
-      ],
-      [PaymentStatus.AUTHORIZED]: [
-        PaymentStatus.PROCESSING,
-        PaymentStatus.FAILED,
-        PaymentStatus.CANCELLED,
-      ],
-      [PaymentStatus.PROCESSING]: [
-        PaymentStatus.COMPLETED,
-        PaymentStatus.FAILED,
-      ],
-      [PaymentStatus.COMPLETED]: [
-        PaymentStatus.REFUNDED,
-        PaymentStatus.PARTIALLY_REFUNDED,
-      ],
-      [PaymentStatus.FAILED]: [],
-      [PaymentStatus.CANCELLED]: [],
-      [PaymentStatus.REFUNDED]: [],
-      [PaymentStatus.PARTIALLY_REFUNDED]: [
-        PaymentStatus.REFUNDED,
-      ],
-    };
+  static assertValidState(payment: Payment): void {
+    // Simplified validation - payment state is managed by state machine
+    // This validates that the payment is in a recognized state
+    const validStates = Object.values(PaymentState);
+    if (!validStates.includes(payment.state)) {
+      throw new Error(`Invalid payment state: ${payment.state}`);
+    }
 
     // This is a simplified check - in production, track state history
-    const currentState = payment.status;
+    const currentState = payment.state;
     console.log(`✓ Payment ${payment.id} in valid state: ${currentState}`);
   }
 
@@ -693,7 +668,7 @@ export class ChaosAssertions {
     message?: string
   ): void {
     const totalDebits = payments
-      .filter(p => p.status === PaymentStatus.COMPLETED)
+      .filter(p => p.state === PaymentState.SUCCESS)
       .reduce((sum, p) => sum + p.amount.amount, 0);
 
     const expectedBalance = initialBalance - totalDebits;
@@ -721,7 +696,7 @@ export class ChaosAssertions {
     // Check for orphaned records (initiated but never completed or failed)
     const orphaned = payments.filter(
       p =>
-        p.status === PaymentStatus.INITIATED &&
+        p.state === PaymentState.INITIATED &&
         Date.now() - p.createdAt.getTime() > 300000 // 5 minutes
     );
 
@@ -740,7 +715,7 @@ export class ChaosAssertions {
    */
   static assertAuditTrail(
     payments: Payment[],
-    events: any[],
+    events: Array<{ paymentId: string; type: string; timestamp: Date }>,
     message?: string
   ): void {
     // Every payment should have at least one event
@@ -781,8 +756,8 @@ export class ChaosAssertions {
    */
   static assertObservability(
     payments: Payment[],
-    logs: any[],
-    metrics: any,
+    logs: Array<{ paymentId: string; level: string; message: string }>,
+    metrics: Record<string, number>,
     message?: string
   ): void {
     // Every payment should have logs

@@ -197,7 +197,7 @@ export class ConsoleLogger implements Logger {
     this.debug(`Starting operation: ${operation}`, timerContext);
 
     return {
-      end: (endContext?: LogContext) => {
+      end: (endContext?: LogContext): number => {
         const duration = Date.now() - startTime;
         this.info(`Completed operation: ${operation}`, {
           ...timerContext,
@@ -206,7 +206,7 @@ export class ConsoleLogger implements Logger {
         });
         return duration;
       },
-      cancel: () => {
+      cancel: (): void => {
         this.debug(`Cancelled operation: ${operation}`, timerContext);
       },
     };
@@ -341,7 +341,7 @@ export class InMemoryMetricsCollector implements MetricsCollector {
     const startTime = Date.now();
 
     return {
-      end: (additionalLabels?: Record<string, string>) => {
+      end: (additionalLabels?: Record<string, string>): void => {
         const duration = Date.now() - startTime;
         const combinedLabels = { ...labels, ...additionalLabels };
         this.timing(metric, duration, combinedLabels);
@@ -436,8 +436,9 @@ export class ObservabilityManager {
       startTime: Date.now(),
 
       // Record success
-      recordSuccess: (additionalContext?: LogContext) => {
-        const duration = Date.now() - (context.startTime || Date.now());
+      recordSuccess: (additionalContext?: LogContext): void => {
+        const startTimeValue = typeof context.startTime === 'number' ? context.startTime : Date.now();
+        const duration = Date.now() - startTimeValue;
         childLogger.info(`${operation} succeeded`, {
           ...additionalContext,
           duration,
@@ -447,8 +448,9 @@ export class ObservabilityManager {
       },
 
       // Record failure
-      recordFailure: (error: Error, additionalContext?: LogContext) => {
-        const duration = Date.now() - (context.startTime || Date.now());
+      recordFailure: (error: Error, additionalContext?: LogContext): void => {
+        const startTimeValue = typeof context.startTime === 'number' ? context.startTime : Date.now();
+        const duration = Date.now() - startTimeValue;
         childLogger.error(`${operation} failed`, error, {
           ...additionalContext,
           duration,
@@ -461,7 +463,7 @@ export class ObservabilityManager {
       },
 
       // Record retry
-      recordRetry: (attempt: number, reason: string) => {
+      recordRetry: (attempt: number, reason: string): void => {
         childLogger.warn(`${operation} retry attempt ${attempt}`, {
           attemptNumber: attempt,
           retryReason: reason,
