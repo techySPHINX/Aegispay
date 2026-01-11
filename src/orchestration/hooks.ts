@@ -442,8 +442,10 @@ export class HookFactory {
   /**
    * Get nested field value from context
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private static getFieldValue(context: any, field: string): unknown {
     const parts = field.split('.');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let value: any = context;
 
     for (const part of parts) {
@@ -594,12 +596,15 @@ export class HookRegistry {
   registerFromConfig(type: string, config: Record<string, unknown>): void {
     switch (type) {
       case 'fraudCheck':
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         this.registerFraudCheck(HookFactory.createFraudCheckFromConfig(config as any));
         break;
       case 'routing':
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         this.registerRoutingStrategy(HookFactory.createRoutingStrategyFromConfig(config as any));
         break;
       case 'validation':
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         this.registerPreValidation(HookFactory.createValidationFromConfig(config as any));
         break;
       default:

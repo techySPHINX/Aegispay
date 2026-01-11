@@ -39,29 +39,28 @@ import {
   ChaosExperiment,
   ChaosAssertions,
   ChaosScenarios,
-  DEFAULT_CHAOS_CONFIG,
 } from '../orchestration/chaosEngineering';
 import { MockGateway } from '../gateways/mockGateway';
-import { Payment, PaymentStatus } from '../domain/payment';
-import { GatewayType, Money } from '../domain/types';
+import { Payment } from '../domain/payment';
+import { GatewayType, Money, Currency, PaymentState, PaymentMethodType } from '../domain/types';
 
 /**
  * Track payments for assertions
  */
 class PaymentTracker {
   private payments: Payment[] = [];
-  private events: any[] = [];
-  private logs: any[] = [];
+  private events: Array<{ paymentId: string; type: string; error?: unknown }> = [];
+  private logs: Array<{ paymentId: string; event: string; latency?: number; error?: unknown }> = [];
 
   addPayment(payment: Payment): void {
     this.payments.push(payment);
   }
 
-  addEvent(event: any): void {
+  addEvent(event: { paymentId: string; type: string; error?: unknown }): void {
     this.events.push(event);
   }
 
-  addLog(log: any): void {
+  addLog(log: { paymentId: string; event: string; latency?: number; error?: unknown }): void {
     this.logs.push(log);
   }
 
@@ -69,11 +68,11 @@ class PaymentTracker {
     return this.payments;
   }
 
-  getEvents(): any[] {
+  getEvents(): Array<{ paymentId: string; type: string; error?: unknown }> {
     return this.events;
   }
 
-  getLogs(): any[] {
+  getLogs(): Array<{ paymentId: string; event: string; latency?: number; error?: unknown }> {
     return this.logs;
   }
 
@@ -83,12 +82,12 @@ class PaymentTracker {
     this.logs = [];
   }
 
-  getMetrics(): any {
+  getMetrics(): { totalPayments: number; completed: number; failed: number; pending: number } {
     return {
       totalPayments: this.payments.length,
-      completed: this.payments.filter(p => p.status === PaymentStatus.COMPLETED).length,
-      failed: this.payments.filter(p => p.status === PaymentStatus.FAILED).length,
-      pending: this.payments.filter(p => p.status === PaymentStatus.PENDING).length,
+      completed: this.payments.filter(p => p.state === PaymentState.COMPLETED).length,
+      failed: this.payments.filter(p => p.state === PaymentState.FAILED).length,
+      pending: this.payments.filter(p => p.state === PaymentState.INITIATED).length,
     };
   }
 }
