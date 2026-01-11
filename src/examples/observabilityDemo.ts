@@ -26,13 +26,11 @@
  */
 
 import { createObservabilityManager, LogLevel } from '../infra/observability';
-import { Payment, PaymentStatus } from '../domain/payment';
-import { GatewayType } from '../domain/types';
 
 /**
  * Simulate a payment processing operation with full observability
  */
-async function processPaymentWithObservability() {
+async function processPaymentWithObservability(): Promise<void> {
   const obsManager = createObservabilityManager(LogLevel.DEBUG);
 
   console.log('\n=== SCENARIO 1: Successful Payment ===\n');
@@ -64,7 +62,7 @@ async function processPaymentWithObservability() {
 
   ctx1.recordSuccess({
     transactionId: 'txn_789',
-    finalStatus: PaymentStatus.COMPLETED,
+    finalStatus: 'COMPLETED',
   });
 
   console.log('\n=== SCENARIO 2: Payment with Retries ===\n');
@@ -97,7 +95,7 @@ async function processPaymentWithObservability() {
   await simulateGatewayCall(40);
   ctx2.recordSuccess({
     transactionId: 'txn_012',
-    finalStatus: PaymentStatus.COMPLETED,
+    finalStatus: 'COMPLETED',
     retryCount: 1,
   });
 
@@ -121,7 +119,7 @@ async function processPaymentWithObservability() {
   } catch (error) {
     ctx3.recordFailure(error as Error, {
       gatewayLatency: 2000,
-      finalStatus: PaymentStatus.FAILED,
+      finalStatus: 'FAILED',
     });
     ctx3.metrics.timing('gateway.latency', 2000, {
       gateway: 'stripe',
@@ -186,7 +184,7 @@ function simulateGatewayCall(latencyMs: number): Promise<void> {
 /**
  * Advanced: Trace propagation across services
  */
-async function demonstrateDistributedTracing() {
+async function demonstrateDistributedTracing(): Promise<void> {
   const obsManager = createObservabilityManager(LogLevel.INFO);
 
   console.log('\n=== DISTRIBUTED TRACING DEMO ===\n');
