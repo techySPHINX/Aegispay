@@ -1,0 +1,35 @@
+# Ignore node_modules
+node_modules/
+
+# Ignore dist
+dist/
+
+# Ignore terraform state files
+*.tfstate
+*.tfstate.backup
+*.tfstate.lock.info
+.terraform/
+.terraform.lock.hcl
+
+# Ignore sensitive files
+*.pem
+*.key
+*.crt
+*.env
+*.env.local
+.env.production
+
+# Ignore terraform variable files with secrets
+terraform.tfvars
+*.auto.tfvars
+
+# Ignore kubeconfig
+kubeconfig
+*.kubeconfig
+
+# Ignore Docker volumes
+postgres-data/
+redis-data/
+kafka-data/
+prometheus-data/
+grafana-data/
