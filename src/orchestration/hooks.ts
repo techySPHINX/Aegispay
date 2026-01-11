@@ -1,5 +1,5 @@
 /**
- * SDK EXTENSIBILITY HOOKS
+ * SDK EXTENSIBILITY HOOKS (FRAMEWORK THINKING)
  * 
  * Provides plugin architecture for extending AegisPay functionality.
  * 
@@ -11,6 +11,45 @@
  * 4. Type Safety: Full TypeScript support
  * 5. Non-Breaking: Hooks are optional, system works without them
  * 
+ * HOW EXTENSIBILITY ENABLES LOW-CODE/NO-CODE:
+ * ===========================================
+ * 
+ * 1. DECLARATIVE CONFIGURATION
+ *    Instead of writing code, users configure behavior:
+ *    
+ *    // No-code approach
+ *    hookRegistry.registerFraudCheck({
+ *      name: 'HighValueCheck',
+ *      priority: 100,
+ *      config: { threshold: 10000 }  // Just config, no code!
+ *    });
+ * 
+ * 2. VISUAL WORKFLOW BUILDERS
+ *    Drag-and-drop interface can generate hooks:
+ *    
+ *    [Payment] → [Fraud Check] → [Route to Gateway] → [Log Event]
+ *                     ↓                  ↓                 ↓
+ *                  config            config           config
+ * 
+ * 3. BUSINESS RULE ENGINE
+ *    Non-developers can define rules:
+ *    
+ *    IF amount > $10,000 THEN require manual approval
+ *    IF country = "US" THEN route to Stripe
+ *    IF customer.vip = true THEN skip fraud check
+ * 
+ * 4. INTEGRATION MARKETPLACE
+ *    Pre-built hooks for common use cases:
+ *    - Slack notifications
+ *    - DataDog metrics
+ *    - Custom CRM integration
+ *    - Tax calculation services
+ * 
+ * 5. CORE LOGIC UNTOUCHED
+ *    Payment processing remains simple and tested
+ *    Extensions can't break core functionality
+ *    Hooks fail gracefully without affecting payments
+ * 
  * AVAILABLE HOOKS:
  * ================
  * 1. PrePaymentValidation - Validate before payment processing
@@ -21,6 +60,8 @@
  * 6. EventListener - React to payment events
  * 7. MetricsCollector - Custom metrics collection
  * 8. ErrorHandler - Custom error handling
+ * 9. CustomValidation - Generic validation hook (NEW)
+ * 10. LifecycleHook - Before/after any operation (NEW)
  * 
  * EXAMPLE:
  * ========
@@ -209,6 +250,237 @@ export interface ErrorHandlerHook extends Hook {
   execute(context: ErrorContext): Promise<ErrorHandlingResult>;
 }
 
+/**
+ * Custom validation hook (generic)
+ * Allows users to add any custom validation logic
+ */
+export interface CustomValidationHook extends Hook {
+  validationType: 'payment' | 'customer' | 'transaction' | 'custom';
+  execute(context: HookContext): Promise<ValidationResult>;
+}
+
+/**
+ * Lifecycle hook for operation before/after
+ * Enables aspect-oriented programming patterns
+ */
+export interface LifecycleHook extends Hook {
+  operation: string;              // Which operation to hook into
+  stage: 'before' | 'after';      // When to execute
+  execute(context: HookContext): Promise<void>;
+}
+
+/**
+ * Configuration-based hook for no-code scenarios
+ * Allows hooks to be defined via JSON configuration
+ */
+export interface ConfigurableHook extends Hook {
+  config: Record<string, unknown>;
+  executeFromConfig(config: Record<string, unknown>, context: HookContext): Promise<unknown>;
+}
+
+// ============================================================================
+// HOOK FACTORY (For No-Code/Low-Code)
+// ============================================================================
+
+/**
+ * Factory to create hooks from configuration
+ * Enables no-code hook registration
+ */
+export class HookFactory {
+  /**
+   * Create fraud check from config
+   */
+  static createFraudCheckFromConfig(config: {
+    name: string;
+    priority?: number;
+    rules: Array<{
+      condition: string;        // e.g., "amount > 10000"
+      riskScore: number;
+      reason: string;
+      block: boolean;
+    }>;
+  }): FraudCheckHook {
+    return {
+      name: config.name,
+      priority: config.priority || 50,
+      enabled: true,
+      execute: async (context: HookContext): Promise<FraudCheckResult> => {
+        for (const rule of config.rules) {
+          // Simple rule evaluation (in production, use a proper rules engine)
+          const shouldApplyRule = HookFactory.evaluateCondition(rule.condition, context);
+          
+          if (shouldApplyRule) {
+            if (rule.block) {
+              return {
+                allowed: false,
+                riskScore: rule.riskScore,
+                reason: rule.reason,
+                metadata: { rule: rule.condition },
+              };
+            }
+          }
+        }
+        
+        return { allowed: true, riskScore: 0 };
+      },
+    };
+  }
+
+  /**
+   * Create routing strategy from config
+   */
+  static createRoutingStrategyFromConfig(config: {
+    name: string;
+    priority?: number;
+    rules: Array<{
+      condition: string;        // e.g., "country = 'US'"
+      gateway: GatewayType;
+      confidence: number;
+      reason: string;
+    }>;
+  }): RoutingStrategyHook {
+    return {
+      name: config.name,
+      priority: config.priority || 50,
+      enabled: true,
+      execute: async (context: RoutingContext): Promise<RoutingDecision> => {
+        for (const rule of config.rules) {
+          const shouldApplyRule = HookFactory.evaluateCondition(rule.condition, context);
+          
+          if (shouldApplyRule) {
+            return {
+              gatewayType: rule.gateway,
+              confidence: rule.confidence,
+              reason: rule.reason,
+              metadata: { rule: rule.condition },
+            };
+          }
+        }
+        
+        // Default fallback
+        return {
+          gatewayType: GatewayType.STRIPE,
+          confidence: 0.5,
+          reason: 'Default gateway',
+        };
+      },
+    };
+  }
+
+  /**
+   * Create custom validation from config
+   */
+  static createValidationFromConfig(config: {
+    name: string;
+    priority?: number;
+    checks: Array<{
+      field: string;           // e.g., "amount", "customer.email"
+      operator: 'eq' | 'ne' | 'gt' | 'lt' | 'gte' | 'lte' | 'contains' | 'matches';
+      value: unknown;
+      errorMessage: string;
+    }>;
+  }): PrePaymentValidationHook {
+    return {
+      name: config.name,
+      priority: config.priority || 50,
+      enabled: true,
+      execute: async (context: HookContext): Promise<ValidationResult> => {
+        const errors: string[] = [];
+        
+        for (const check of config.checks) {
+          const fieldValue = HookFactory.getFieldValue(context, check.field);
+          const isValid = HookFactory.compareValues(
+            fieldValue,
+            check.operator,
+            check.value
+          );
+          
+          if (!isValid) {
+            errors.push(check.errorMessage);
+          }
+        }
+        
+        return {
+          valid: errors.length === 0,
+          errors: errors.length > 0 ? errors : undefined,
+        };
+      },
+    };
+  }
+
+  /**
+   * Simple condition evaluator (use a proper rules engine in production)
+   */
+  private static evaluateCondition(
+    condition: string,
+    context: HookContext | RoutingContext
+  ): boolean {
+    // Simple evaluation - in production use a library like json-rules-engine
+    try {
+      // Extract field and comparison
+      const match = condition.match(/(\w+\.?\w*)\s*(>|<|>=|<=|=|!=)\s*(.+)/);
+      if (!match) return false;
+      
+      const [, field, operator, value] = match;
+      const fieldValue = HookFactory.getFieldValue(context, field);
+      const compareValue = value.replace(/['"]/g, '');
+      
+      switch (operator) {
+        case '>': return Number(fieldValue) > Number(compareValue);
+        case '<': return Number(fieldValue) < Number(compareValue);
+        case '>=': return Number(fieldValue) >= Number(compareValue);
+        case '<=': return Number(fieldValue) <= Number(compareValue);
+        case '=': return String(fieldValue) === compareValue;
+        case '!=': return String(fieldValue) !== compareValue;
+        default: return false;
+      }
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Get nested field value from context
+   */
+  private static getFieldValue(context: any, field: string): unknown {
+    const parts = field.split('.');
+    let value: any = context;
+    
+    for (const part of parts) {
+      if (value && typeof value === 'object' && part in value) {
+        value = value[part];
+      } else {
+        return undefined;
+      }
+    }
+    
+    return value;
+  }
+
+  /**
+   * Compare values based on operator
+   */
+  private static compareValues(
+    fieldValue: unknown,
+    operator: string,
+    compareValue: unknown
+  ): boolean {
+    switch (operator) {
+      case 'eq': return fieldValue === compareValue;
+      case 'ne': return fieldValue !== compareValue;
+      case 'gt': return Number(fieldValue) > Number(compareValue);
+      case 'lt': return Number(fieldValue) < Number(compareValue);
+      case 'gte': return Number(fieldValue) >= Number(compareValue);
+      case 'lte': return Number(fieldValue) <= Number(compareValue);
+      case 'contains':
+        return String(fieldValue).includes(String(compareValue));
+      case 'matches':
+        return new RegExp(String(compareValue)).test(String(fieldValue));
+      default: return false;
+    }
+  }
+}
+
 // ============================================================================
 // HOOK REGISTRY
 // ============================================================================
@@ -225,6 +497,8 @@ export class HookRegistry {
   private eventListenerHooks: EventListenerHook[] = [];
   private metricsCollectorHooks: MetricsCollectorHook[] = [];
   private errorHandlerHooks: ErrorHandlerHook[] = [];
+  private customValidationHooks: CustomValidationHook[] = [];
+  private lifecycleHooks: LifecycleHook[] = [];
 
   /**
    * Register pre-payment validation hook
@@ -297,6 +571,43 @@ export class HookRegistry {
   }
 
   /**
+   * Register custom validation hook (NEW)
+   */
+  registerCustomValidation(hook: CustomValidationHook): void {
+    this.customValidationHooks.push(hook);
+    this.customValidationHooks.sort((a, b) => b.priority - a.priority);
+    console.log(`[Hooks] Registered CustomValidation: ${hook.name} (type: ${hook.validationType})`);
+  }
+
+  /**
+   * Register lifecycle hook (NEW)
+   */
+  registerLifecycleHook(hook: LifecycleHook): void {
+    this.lifecycleHooks.push(hook);
+    this.lifecycleHooks.sort((a, b) => b.priority - a.priority);
+    console.log(`[Hooks] Registered LifecycleHook: ${hook.name} (${hook.stage} ${hook.operation})`);
+  }
+
+  /**
+   * Convenience: Register hook from config (No-Code)
+   */
+  registerFromConfig(type: string, config: Record<string, unknown>): void {
+    switch (type) {
+      case 'fraudCheck':
+        this.registerFraudCheck(HookFactory.createFraudCheckFromConfig(config as any));
+        break;
+      case 'routing':
+        this.registerRoutingStrategy(HookFactory.createRoutingStrategyFromConfig(config as any));
+        break;
+      case 'validation':
+        this.registerPreValidation(HookFactory.createValidationFromConfig(config as any));
+        break;
+      default:
+        throw new Error(`Unknown hook type: ${type}`);
+    }
+  }
+
+  /**
    * Get enabled hooks of specific type
    */
   getPreValidationHooks(): PrePaymentValidationHook[] {
@@ -335,6 +646,18 @@ export class HookRegistry {
     );
   }
 
+  getCustomValidationHooks(type?: string): CustomValidationHook[] {
+    return this.customValidationHooks.filter(
+      (h) => h.enabled && (!type || h.validationType === type)
+    );
+  }
+
+  getLifecycleHooks(operation: string, stage: 'before' | 'after'): LifecycleHook[] {
+    return this.lifecycleHooks.filter(
+      (h) => h.enabled && h.operation === operation && h.stage === stage
+    );
+  }
+
   /**
    * Clear all hooks
    */
@@ -347,6 +670,8 @@ export class HookRegistry {
     this.eventListenerHooks = [];
     this.metricsCollectorHooks = [];
     this.errorHandlerHooks = [];
+    this.customValidationHooks = [];
+    this.lifecycleHooks = [];
   }
 }
 

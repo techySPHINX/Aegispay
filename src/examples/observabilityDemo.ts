@@ -34,53 +34,53 @@ import { GatewayType } from '../domain/types';
  */
 async function processPaymentWithObservability() {
   const obsManager = createObservabilityManager(LogLevel.DEBUG);
-  
+
   console.log('\n=== SCENARIO 1: Successful Payment ===\n');
-  
+
   // Create observability context for the operation
   const ctx1 = obsManager.createContext('process_payment', {
     paymentId: 'pay_123',
     customerId: 'cust_456',
     gatewayType: 'stripe',
   });
-  
+
   ctx1.logger.info('Payment processing started', {
     amount: 100.00,
     currency: 'USD',
   });
-  
+
   // Simulate gateway call with timer
   const gatewayTimer = ctx1.logger.startTimer('gateway_call', {
     gatewayType: 'stripe',
   });
-  
+
   await simulateGatewayCall(50); // 50ms latency
   const duration = gatewayTimer.end({ gatewayResponse: 'success' });
-  
+
   ctx1.metrics.timing('gateway.latency', duration, {
     gateway: 'stripe',
     status: 'success',
   });
-  
+
   ctx1.recordSuccess({
     transactionId: 'txn_789',
     finalStatus: PaymentStatus.COMPLETED,
   });
-  
+
   console.log('\n=== SCENARIO 2: Payment with Retries ===\n');
-  
+
   // Simulate payment that requires retries
   const ctx2 = obsManager.createContext('process_payment', {
     paymentId: 'pay_456',
     customerId: 'cust_789',
     gatewayType: 'paypal',
   });
-  
+
   ctx2.logger.info('Payment processing started', {
     amount: 250.00,
     currency: 'EUR',
   });
-  
+
   // First attempt fails
   try {
     await simulateGatewayCall(30);
@@ -92,7 +92,7 @@ async function processPaymentWithObservability() {
       status: 'timeout',
     });
   }
-  
+
   // Second attempt succeeds
   await simulateGatewayCall(40);
   ctx2.recordSuccess({
@@ -100,21 +100,21 @@ async function processPaymentWithObservability() {
     finalStatus: PaymentStatus.COMPLETED,
     retryCount: 1,
   });
-  
+
   console.log('\n=== SCENARIO 3: Failed Payment ===\n');
-  
+
   // Simulate payment failure
   const ctx3 = obsManager.createContext('process_payment', {
     paymentId: 'pay_789',
     customerId: 'cust_012',
     gatewayType: 'stripe',
   });
-  
+
   ctx3.logger.info('Payment processing started', {
     amount: 500.00,
     currency: 'GBP',
   });
-  
+
   try {
     await simulateGatewayCall(2000); // Slow gateway
     throw new Error('Insufficient funds');
@@ -128,11 +128,11 @@ async function processPaymentWithObservability() {
       status: 'failure',
     });
   }
-  
+
   console.log('\n=== METRICS SUMMARY ===\n');
   const metrics = obsManager.exportPrometheus();
   console.log(metrics);
-  
+
   console.log('\n=== HOW TO DEBUG WITH OBSERVABILITY ===\n');
   console.log(`
 DEBUGGING WORKFLOW:
@@ -188,17 +188,17 @@ function simulateGatewayCall(latencyMs: number): Promise<void> {
  */
 async function demonstrateDistributedTracing() {
   const obsManager = createObservabilityManager(LogLevel.INFO);
-  
+
   console.log('\n=== DISTRIBUTED TRACING DEMO ===\n');
-  
+
   // Service 1: Payment Service
   const paymentCtx = obsManager.createContext('payment_service', {
     paymentId: 'pay_999',
     service: 'payment-api',
   });
-  
+
   paymentCtx.logger.info('Payment request received');
-  
+
   // Service 2: Fraud Check (child span)
   const fraudCtx = obsManager.createContext('fraud_check', {
     paymentId: 'pay_999',
@@ -206,11 +206,11 @@ async function demonstrateDistributedTracing() {
     parentTraceId: paymentCtx.traceContext.traceId,
     parentSpanId: paymentCtx.traceContext.spanId,
   });
-  
+
   fraudCtx.logger.info('Running fraud check');
   await simulateGatewayCall(20);
   fraudCtx.recordSuccess({ riskScore: 0.1 });
-  
+
   // Service 3: Gateway (child span)
   const gatewayCtx = obsManager.createContext('gateway_call', {
     paymentId: 'pay_999',
@@ -218,17 +218,17 @@ async function demonstrateDistributedTracing() {
     parentTraceId: paymentCtx.traceContext.traceId,
     parentSpanId: paymentCtx.traceContext.spanId,
   });
-  
+
   gatewayCtx.logger.info('Calling payment gateway');
   await simulateGatewayCall(50);
   gatewayCtx.recordSuccess({ transactionId: 'txn_999' });
-  
+
   // Complete payment
-  paymentCtx.recordSuccess({ 
+  paymentCtx.recordSuccess({
     totalDuration: 70,
     childOperations: ['fraud_check', 'gateway_call'],
   });
-  
+
   console.log(`
 TRACE ANALYSIS:
 ===============
