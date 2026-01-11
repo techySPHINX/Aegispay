@@ -116,7 +116,7 @@ async function experimentGatewayTimeout() {
     validateInvariants: async () => {
       // Verify no duplicates
       ChaosAssertions.assertNoDuplicates(tracker.getPayments());
-      
+
       // Verify observability
       if (tracker.getPayments().length > 0) {
         ChaosAssertions.assertObservability(
@@ -125,7 +125,7 @@ async function experimentGatewayTimeout() {
           tracker.getMetrics()
         );
       }
-      
+
       return true;
     },
   };
@@ -150,7 +150,7 @@ async function experimentGatewayTimeout() {
     while (attempts < maxAttempts) {
       try {
         const result = await chaosGateway.process(payment);
-        
+
         if (result.success) {
           payment.status = PaymentStatus.COMPLETED;
           tracker.addPayment(payment);
@@ -161,7 +161,7 @@ async function experimentGatewayTimeout() {
       } catch (error) {
         attempts++;
         tracker.addLog({ paymentId: payment.id, event: 'retry', attempt: attempts });
-        
+
         if (attempts < maxAttempts) {
           // Exponential backoff
           await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, attempts)));
@@ -179,11 +179,11 @@ async function experimentGatewayTimeout() {
 
   console.log('\n📋 CORRECTNESS VALIDATION:');
   console.log('===========================');
-  
+
   // Additional assertions
   const completedPayments = tracker.getPayments().filter(p => p.status === PaymentStatus.COMPLETED);
   const failedPayments = tracker.getPayments().filter(p => p.status === PaymentStatus.FAILED);
-  
+
   console.log(`✓ Completed payments: ${completedPayments.length}`);
   console.log(`✓ Failed payments: ${failedPayments.length}`);
   console.log(`✓ Total attempts: ${tracker.getLogs().length}`);
@@ -217,12 +217,12 @@ async function experimentIntermittentFailures() {
     maxAverageLatency: 2000,
     validateInvariants: async () => {
       ChaosAssertions.assertNoDuplicates(tracker.getPayments());
-      
+
       // Verify state machine validity
       tracker.getPayments().forEach(p => {
         ChaosAssertions.assertValidState(p);
       });
-      
+
       return true;
     },
   };
@@ -330,7 +330,7 @@ async function experimentLatencySpike() {
     const avgLatency = latencies.reduce((a, b) => a + b, 0) / latencies.length;
     const maxLatency = Math.max(...latencies);
     const minLatency = Math.min(...latencies);
-    
+
     console.log(`✓ Average latency: ${avgLatency.toFixed(2)}ms`);
     console.log(`✓ Min latency: ${minLatency}ms`);
     console.log(`✓ Max latency: ${maxLatency}ms`);
