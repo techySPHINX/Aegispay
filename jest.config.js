@@ -1,4 +1,9 @@
-module.exports = {
+/**
+ * Jest configuration for TypeScript projects using ts-jest.
+ * Updated for Jest 29+ and ts-jest 29+ (no deprecated 'globals' usage).
+ */
+
+const config = {
   preset: 'ts-jest',
   testEnvironment: 'node',
   roots: ['<rootDir>/tests'],
@@ -37,9 +42,6 @@ module.exports = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
-  globals: {
-    'ts-jest': {
-      isolatedModules: true,
-    },
-  },
 };
+
+export default config;

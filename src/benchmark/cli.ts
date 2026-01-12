@@ -9,7 +9,7 @@
 
 import { performance } from 'perf_hooks';
 import { PaymentStateMachine } from '../domain/paymentStateMachine';
-import { PaymentState, Money, Currency } from '../domain/types';
+import { PaymentState, Money, Currency, PaymentMethodType, GatewayType } from '../domain/types';
 import { Payment } from '../domain/payment';
 
 // ============================================================================
@@ -74,14 +74,20 @@ async function benchmarkTPS(): Promise<BenchmarkResult> {
 
     try {
       // Simulate core SDK operations
-      const payment = new Payment({
+      new Payment({
         id: `pay_${requestCount}`,
         idempotencyKey: `idem_${requestCount}`,
         state: PaymentState.INITIATED,
         amount: new Money(10000, Currency.USD),
         paymentMethod: {
-          type: 'CARD' as any,
-          details: { cardNumber: '4242424242424242' } as any,
+          type: PaymentMethodType.CARD,
+          details: {
+            cardNumber: '4242424242424242',
+            expiryMonth: '12',
+            expiryYear: '2025',
+            cvv: '123',
+            cardHolderName: 'Test User',
+          },
         },
         customer: {
           id: 'cust_123',
@@ -150,7 +156,7 @@ async function benchmarkLatency(): Promise<BenchmarkResult> {
     const batchPromises: Promise<number>[] = [];
 
     for (let j = 0; j < batch; j++) {
-      const promise = (async () => {
+      const promise = (async (): Promise<number> => {
         const opStart = performance.now();
 
         try {
@@ -161,8 +167,14 @@ async function benchmarkLatency(): Promise<BenchmarkResult> {
             state: PaymentState.INITIATED,
             amount: new Money(10000, Currency.USD),
             paymentMethod: {
-              type: 'CARD' as any,
-              details: {} as any,
+              type: PaymentMethodType.CARD,
+              details: {
+                cardNumber: '4242424242424242',
+                expiryMonth: '12',
+                expiryYear: '2025',
+                cvv: '123',
+                cardHolderName: 'Test User',
+              },
             },
             customer: {
               id: 'cust_123',
@@ -171,9 +183,9 @@ async function benchmarkLatency(): Promise<BenchmarkResult> {
           });
 
           // Full state machine flow
-          const authenticated = payment.authenticate('STRIPE' as any);
+          const authenticated = payment.authenticate(GatewayType.STRIPE);
           const processing = authenticated.startProcessing('txn_123');
-          const success = processing.markSuccess();
+          processing.markSuccess();
 
           successCount++;
         } catch (error) {
@@ -228,7 +240,7 @@ async function benchmarkConcurrentLoad(): Promise<BenchmarkResult> {
     const batchPromises: Promise<number>[] = [];
 
     for (let j = 0; j < batch; j++) {
-      const promise = (async () => {
+      const promise = (async (): Promise<number> => {
         const opStart = performance.now();
 
         try {
@@ -298,7 +310,7 @@ function printResult(result: BenchmarkResult): void {
 // MAIN
 // ============================================================================
 
-async function main() {
+async function main(): Promise<void> {
   console.log('═══════════════════════════════════════════════════════════════════════');
   console.log('🎯 AEGISPAY BENCHMARK SUITE');
   console.log('═══════════════════════════════════════════════════════════════════════');

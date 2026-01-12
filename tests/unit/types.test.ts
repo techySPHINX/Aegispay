@@ -35,14 +35,14 @@ describe('Result Type (Functional Error Handling)', () => {
 
     it('should flatMap success value', () => {
       const result = ok(10);
-      const mapped = result.flatMap((x) => ok(x * 2));
+      const mapped = (result as Success<number>).flatMap((x: number) => ok(x * 2));
 
       expect((mapped as Success<number>).value).toBe(20);
     });
 
     it('should flatMap to failure', () => {
       const result = ok(10);
-      const mapped = result.flatMap((x) =>
+      const mapped = (result as Success<number>).flatMap((x: number) =>
         x > 5 ? fail(new Error('Too large')) : ok(x)
       );
 
@@ -82,7 +82,7 @@ describe('Result Type (Functional Error Handling)', () => {
 
     it('should flatMap failure (no-op)', () => {
       const result = fail(new Error('Error'));
-      const mapped = result.flatMap((x: never) => ok(x));
+      const mapped = (result as Failure<Error>).flatMap(() => ok(42));
 
       expect(mapped.isFailure).toBe(true);
     });
@@ -135,18 +135,16 @@ describe('Result Type (Functional Error Handling)', () => {
     });
 
     it('should chain flatMap operations on success', () => {
-      const result = ok(10)
-        .flatMap((x) => ok(x * 2))
-        .flatMap((x) => ok(x + 5));
+      const step1 = (ok(10) as Success<number>).flatMap((x: number) => ok(x * 2));
+      const result = (step1 as Success<number>).flatMap((x: number) => ok(x + 5));
 
       expect((result as Success<number>).value).toBe(25);
     });
 
     it('should short-circuit on first failure', () => {
-      const result = ok(10)
-        .flatMap((x) => ok(x * 2))
-        .flatMap(() => fail(new Error('Failed')))
-        .flatMap((x) => ok(x + 5));
+      const step1 = (ok(10) as Success<number>).flatMap((x: number) => ok(x * 2));
+      const step2 = (step1 as Success<number>).flatMap(() => fail(new Error('Failed')));
+      const result = (step2 as Failure<Error>).flatMap((x: number) => ok(x + 5));
 
       expect(result.isFailure).toBe(true);
       expect((result as Failure<Error>).error.message).toBe('Failed');
