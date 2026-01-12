@@ -1,6 +1,6 @@
 /**
  * Idempotency Engine Demo
- * 
+ *
  * Demonstrates how the idempotency engine prevents double charges under all failure scenarios:
  * - Network retries
  * - Client retries
@@ -46,7 +46,7 @@ import { PaymentState, Money, Currency, PaymentMethodType, GatewayType } from '.
     const idempotencyKey = 'demo1_key_12345';
 
     const request = {
-      amount: 100.00,
+      amount: 100.0,
       currency: 'USD',
       customerId: 'cust_001',
     };
@@ -54,7 +54,11 @@ import { PaymentState, Money, Currency, PaymentMethodType, GatewayType } from '.
     let executionCount = 0;
 
     // Simulate payment creation with network retry
-    const createPayment = async (): Promise<{ paymentId: string; amount: number; status: string }> => {
+    const createPayment = async (): Promise<{
+      paymentId: string;
+      amount: number;
+      status: string;
+    }> => {
       executionCount++;
       console.log(`  Execution attempt #${executionCount}`);
 
@@ -124,13 +128,13 @@ import { PaymentState, Money, Currency, PaymentMethodType, GatewayType } from '.
     const idempotencyKey = 'demo2_key_67890';
 
     const originalRequest = {
-      amount: 50.00,
+      amount: 50.0,
       currency: 'USD',
       customerId: 'cust_002',
     };
 
     const tamperedRequest = {
-      amount: 500.00, // ⚠️ Changed amount!
+      amount: 500.0, // ⚠️ Changed amount!
       currency: 'USD',
       customerId: 'cust_002',
     };
@@ -188,7 +192,7 @@ import { PaymentState, Money, Currency, PaymentMethodType, GatewayType } from '.
     const idempotencyKey = 'demo3_concurrent_key';
 
     const request = {
-      amount: 75.00,
+      amount: 75.0,
       currency: 'USD',
       customerId: 'cust_003',
     };
@@ -196,13 +200,15 @@ import { PaymentState, Money, Currency, PaymentMethodType, GatewayType } from '.
     let executionCount = 0;
     const processOrder: number[] = [];
 
-    const createPayment = async (processId: number): Promise<{ paymentId: string; amount: number; status: string }> => {
+    const createPayment = async (
+      processId: number
+    ): Promise<{ paymentId: string; amount: number; status: string }> => {
       processOrder.push(processId);
       executionCount++;
       console.log(`  [Process ${processId}] Starting execution...`);
 
       // Simulate slow operation
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       console.log(`  [Process ${processId}] Execution complete`);
       return {
@@ -217,26 +223,14 @@ import { PaymentState, Money, Currency, PaymentMethodType, GatewayType } from '.
 
     // Launch 3 concurrent requests
     const [result1, result2, result3] = await Promise.all([
-      engine.executeIdempotent(
-        merchantId,
-        operation,
-        idempotencyKey,
-        request,
-        () => createPayment(1)
+      engine.executeIdempotent(merchantId, operation, idempotencyKey, request, () =>
+        createPayment(1)
       ),
-      engine.executeIdempotent(
-        merchantId,
-        operation,
-        idempotencyKey,
-        request,
-        () => createPayment(2)
+      engine.executeIdempotent(merchantId, operation, idempotencyKey, request, () =>
+        createPayment(2)
       ),
-      engine.executeIdempotent(
-        merchantId,
-        operation,
-        idempotencyKey,
-        request,
-        () => createPayment(3)
+      engine.executeIdempotent(merchantId, operation, idempotencyKey, request, () =>
+        createPayment(3)
       ),
     ]);
 
@@ -268,7 +262,7 @@ import { PaymentState, Money, Currency, PaymentMethodType, GatewayType } from '.
     const idempotencyKey = 'demo4_restart_key';
 
     const request = {
-      amount: 125.00,
+      amount: 125.0,
       currency: 'USD',
       customerId: 'cust_004',
     };
@@ -331,7 +325,7 @@ import { PaymentState, Money, Currency, PaymentMethodType, GatewayType } from '.
     const idempotencyKey = 'demo5_failure_key';
 
     const request = {
-      amount: 200.00,
+      amount: 200.0,
       currency: 'USD',
       customerId: 'cust_005',
     };
@@ -343,17 +337,11 @@ import { PaymentState, Money, Currency, PaymentMethodType, GatewayType } from '.
     // First request - fails with permanent error
     console.log('Request 1: Initial attempt (will fail)');
     try {
-      await engine.executeIdempotent(
-        merchantId,
-        operation,
-        idempotencyKey,
-        request,
-        async () => {
-          attemptCount++;
-          console.log(`  Execution attempt #${attemptCount}`);
-          throw new Error('Insufficient funds');
-        }
-      );
+      await engine.executeIdempotent(merchantId, operation, idempotencyKey, request, async () => {
+        attemptCount++;
+        console.log(`  Execution attempt #${attemptCount}`);
+        throw new Error('Insufficient funds');
+      });
     } catch (error: unknown) {
       console.log('✗ Error:', (error as Error).message, '\n');
     }
@@ -361,17 +349,11 @@ import { PaymentState, Money, Currency, PaymentMethodType, GatewayType } from '.
     // Retry - returns cached error (NO re-execution)
     console.log('Request 2: Client retry');
     try {
-      await engine.executeIdempotent(
-        merchantId,
-        operation,
-        idempotencyKey,
-        request,
-        async () => {
-          attemptCount++;
-          console.log(`  This should NOT execute!`);
-          throw new Error('Insufficient funds');
-        }
-      );
+      await engine.executeIdempotent(merchantId, operation, idempotencyKey, request, async () => {
+        attemptCount++;
+        console.log(`  This should NOT execute!`);
+        throw new Error('Insufficient funds');
+      });
     } catch (error: unknown) {
       console.log('✗ Cached error:', (error as Error).message);
       console.log(`  Execution count: ${attemptCount} (still 1!)\n`);
@@ -478,7 +460,7 @@ import { PaymentState, Money, Currency, PaymentMethodType, GatewayType } from '.
       console.log('  → Charging payment gateway');
 
       // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       const payment = new Payment({
         id: `pay_${Date.now()}`,
@@ -568,7 +550,7 @@ import { PaymentState, Money, Currency, PaymentMethodType, GatewayType } from '.
     }
 
     console.log('\nWaiting for records to expire (150ms)...');
-    await new Promise(resolve => setTimeout(resolve, 150));
+    await new Promise((resolve) => setTimeout(resolve, 150));
 
     console.log('Running cleanup...\n');
     const deleted = await shortTTLEngine.cleanup();

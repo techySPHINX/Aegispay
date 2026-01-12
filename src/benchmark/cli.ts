@@ -119,10 +119,15 @@ async function runConcurrentBenchmark(): Promise<BenchmarkResult> {
 
 async function simulatePayment(): Promise<void> {
   // Simulate async payment processing with minimal delay
-  return new Promise(resolve => setImmediate(resolve));
+  return new Promise((resolve) => setImmediate(resolve));
 }
 
-function calculateLatencies(latencies: number[]): { p50: number; p95: number; p99: number; avg: number } {
+function calculateLatencies(latencies: number[]): {
+  p50: number;
+  p95: number;
+  p99: number;
+  avg: number;
+} {
   const sorted = latencies.sort((a, b) => a - b);
   const len = sorted.length;
 
@@ -177,7 +182,7 @@ async function runBenchmarks(type?: string): Promise<void> {
   console.log('\n📊 Benchmark Results:');
   console.log('=====================\n');
 
-  results.forEach(result => {
+  results.forEach((result) => {
     console.log(`${result.testName}:`);
     console.log(`  TPS: ${result.tps.toFixed(2)}`);
     console.log(`  P95 Latency: ${result.latencies.p95.toFixed(2)}ms`);
@@ -198,7 +203,7 @@ function generateMarkdownReport(report: BenchmarkReport): string {
   md += '| Test | TPS | P50 | P95 | P99 | Avg | Success Rate |\n';
   md += '|------|-----|-----|-----|-----|-----|-------------|\n';
 
-  report.results.forEach(result => {
+  report.results.forEach((result) => {
     md += `| ${result.testName} `;
     md += `| ${result.tps.toFixed(0)} `;
     md += `| ${result.latencies.p50.toFixed(2)}ms `;
@@ -209,7 +214,7 @@ function generateMarkdownReport(report: BenchmarkReport): string {
   });
 
   md += '\n## Summary\n\n';
-  report.results.forEach(result => {
+  report.results.forEach((result) => {
     md += `### ${result.testName}\n\n`;
     md += `- **Throughput:** ${result.tps.toFixed(2)} TPS\n`;
     md += `- **P95 Latency:** ${result.latencies.p95.toFixed(2)}ms\n`;
@@ -222,9 +227,12 @@ function generateMarkdownReport(report: BenchmarkReport): string {
 
 // Parse command line arguments
 const args = process.argv.slice(2);
-const type = args.includes('--tps') ? 'tps'
-  : args.includes('--latency') ? 'latency'
-    : args.includes('--concurrent') ? 'concurrent'
+const type = args.includes('--tps')
+  ? 'tps'
+  : args.includes('--latency')
+    ? 'latency'
+    : args.includes('--concurrent')
+      ? 'concurrent'
       : undefined;
 
 runBenchmarks(type).catch(console.error);

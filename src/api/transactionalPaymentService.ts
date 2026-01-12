@@ -1,6 +1,6 @@
 /**
  * Transactional Payment Service with Outbox Pattern
- * 
+ *
  * This service integrates the transactional outbox pattern to guarantee
  * exactly-once event delivery. State changes and event persistence are atomic.
  */
@@ -22,7 +22,10 @@ import { PaymentRepository } from '../infra/db';
 import { GatewayRegistry } from '../gateways/registry';
 import { PaymentRouter, RoutingContext } from '../orchestration/router';
 import { RetryPolicy } from '../orchestration/retryPolicy';
-import { CircuitBreaker, CircuitBreakerHealthTracker } from '../orchestration/enhancedCircuitBreaker';
+import {
+  CircuitBreaker,
+  CircuitBreakerHealthTracker,
+} from '../orchestration/enhancedCircuitBreaker';
 import { Logger, MetricsCollector } from '../infra/observability';
 import { GatewayError } from '../gateways/gateway';
 import { LockManager, InMemoryLockManager, withLock } from '../infra/lockManager';
@@ -57,7 +60,7 @@ export interface ProcessPaymentRequest {
 
 /**
  * Transactional Payment Service
- * 
+ *
  * KEY FEATURES:
  * 1. Atomic state updates and event persistence (transactional outbox)
  * 2. Exactly-once event delivery semantics
@@ -114,15 +117,13 @@ export class TransactionalPaymentService {
 
   /**
    * Create a new payment with transactional event persistence
-   * 
+   *
    * ATOMICITY GUARANTEE:
    * - Payment state saved to DB
    * - Event saved to outbox
    * - Both in SAME transaction (or both fail)
    */
-  async createPayment(
-    request: CreatePaymentRequest
-  ): Promise<Result<Payment, Error>> {
+  async createPayment(request: CreatePaymentRequest): Promise<Result<Payment, Error>> {
     const startTime = Date.now();
 
     try {
@@ -172,13 +173,18 @@ export class TransactionalPaymentService {
 
           this.metrics.increment('payment.created');
           // No recordDuration method; use increment with duration label
-          this.metrics.increment('payment.create_duration', { duration: String(Date.now() - startTime) });
+          this.metrics.increment('payment.create_duration', {
+            duration: String(Date.now() - startTime),
+          });
 
           return ok(payment);
         }
       );
     } catch (error) {
-      this.logger.error('Failed to create payment', error instanceof Error ? error : new Error(String(error)));
+      this.logger.error(
+        'Failed to create payment',
+        error instanceof Error ? error : new Error(String(error))
+      );
       this.metrics.increment('payment.create_failed');
       return fail(error instanceof Error ? error : new Error(String(error)));
     }
@@ -186,16 +192,14 @@ export class TransactionalPaymentService {
 
   /**
    * Process a payment with transactional guarantees
-   * 
+   *
    * EXACTLY-ONCE SEMANTICS:
    * 1. Lock prevents concurrent processing
    * 2. State changes and events saved atomically
    * 3. Outbox ensures event is eventually delivered
    * 4. Idempotency prevents duplicate processing
    */
-  async processPayment(
-    request: ProcessPaymentRequest
-  ): Promise<Result<Payment, Error>> {
+  async processPayment(request: ProcessPaymentRequest): Promise<Result<Payment, Error>> {
     const startTime = Date.now();
 
     try {
@@ -221,16 +225,13 @@ export class TransactionalPaymentService {
           }
 
           // Step 1: Authenticate (select gateway)
-          const gatewayType = request.gatewayType || await this.selectGateway(payment);
+          const gatewayType = request.gatewayType || (await this.selectGateway(payment));
 
-          payment = await this.savePaymentWithEvent(
-            payment.authenticate(gatewayType),
-            async () => {
-              if (!payment) throw new Error('Payment is null');
-              const version = this.getNextVersion(payment.id);
-              return PaymentEventFactory.createPaymentAuthenticated(payment, version);
-            }
-          );
+          payment = await this.savePaymentWithEvent(payment.authenticate(gatewayType), async () => {
+            if (!payment) throw new Error('Payment is null');
+            const version = this.getNextVersion(payment.id);
+            return PaymentEventFactory.createPaymentAuthenticated(payment, version);
+          });
 
           // Step 2: Process payment at gateway
           const gateway = this.gatewayRegistry.getGateway(gatewayType);
@@ -247,19 +248,15 @@ export class TransactionalPaymentService {
 
           if (!processResult.isSuccess) {
             // Payment failed - save failure state atomically
-            const errorMsg = processResult instanceof Failure ? (processResult.error?.message || 'Gateway processing failed') : 'Gateway processing failed';
-            payment = await this.savePaymentWithEvent(
-              payment.markFailure(errorMsg),
-              async () => {
-                if (!payment) throw new Error('Payment is null');
-                const version = this.getNextVersion(payment.id);
-                return PaymentEventFactory.createPaymentFailed(
-                  payment,
-                  version,
-                  false
-                );
-              }
-            );
+            const errorMsg =
+              processResult instanceof Failure
+                ? processResult.error?.message || 'Gateway processing failed'
+                : 'Gateway processing failed';
+            payment = await this.savePaymentWithEvent(payment.markFailure(errorMsg), async () => {
+              if (!payment) throw new Error('Payment is null');
+              const version = this.getNextVersion(payment.id);
+              return PaymentEventFactory.createPaymentFailed(payment, version, false);
+            });
 
             this.logger.error('Payment failed', new Error(errorMsg));
 
@@ -273,26 +270,17 @@ export class TransactionalPaymentService {
             async () => {
               if (!payment) throw new Error('Payment is null');
               const version = this.getNextVersion(payment.id);
-              return PaymentEventFactory.createPaymentProcessing(
-                payment,
-                version
-              );
+              return PaymentEventFactory.createPaymentProcessing(payment, version);
             }
           );
 
           // Step 4: Verify and mark success
           if (response.success) {
-            payment = await this.savePaymentWithEvent(
-              payment.markSuccess(),
-              async () => {
-                if (!payment) throw new Error('Payment is null');
-                const version = this.getNextVersion(payment.id);
-                return PaymentEventFactory.createPaymentSucceeded(
-                  payment,
-                  version
-                );
-              }
-            );
+            payment = await this.savePaymentWithEvent(payment.markSuccess(), async () => {
+              if (!payment) throw new Error('Payment is null');
+              const version = this.getNextVersion(payment.id);
+              return PaymentEventFactory.createPaymentSucceeded(payment, version);
+            });
 
             this.logger.info('Payment succeeded', {
               paymentId: payment.id,
@@ -300,7 +288,9 @@ export class TransactionalPaymentService {
             });
 
             this.metrics.increment('payment.succeeded');
-            this.metrics.increment('payment.process_duration', { duration: String(Date.now() - startTime) });
+            this.metrics.increment('payment.process_duration', {
+              duration: String(Date.now() - startTime),
+            });
 
             return ok(payment);
           } else {
@@ -310,11 +300,7 @@ export class TransactionalPaymentService {
               async () => {
                 if (!payment) throw new Error('Payment is null');
                 const version = this.getNextVersion(payment.id);
-                return PaymentEventFactory.createPaymentFailed(
-                  payment,
-                  version,
-                  false
-                );
+                return PaymentEventFactory.createPaymentFailed(payment, version, false);
               }
             );
             return fail(new Error('Payment failed'));
@@ -322,7 +308,10 @@ export class TransactionalPaymentService {
         }
       );
     } catch (error) {
-      this.logger.error('Payment processing error', error instanceof Error ? error : new Error(String(error)));
+      this.logger.error(
+        'Payment processing error',
+        error instanceof Error ? error : new Error(String(error))
+      );
       this.metrics.increment('payment.process_failed');
       return fail(error instanceof Error ? error : new Error(String(error)));
     }
@@ -330,12 +319,12 @@ export class TransactionalPaymentService {
 
   /**
    * CRITICAL METHOD: Save payment and event atomically
-   * 
+   *
    * This is the heart of the transactional outbox pattern:
    * 1. Save payment state to repository
    * 2. Save event to outbox
    * 3. Both operations are atomic (same transaction)
-   * 
+   *
    * In production with a real database:
    * - Wrap in database transaction
    * - Use repository.saveWithEvent(payment, event)
@@ -371,7 +360,10 @@ export class TransactionalPaymentService {
       return payment;
     } catch (error) {
       // If either operation fails, roll back (in production DB handles this)
-      this.logger.error('Failed to save payment with event', error instanceof Error ? error : new Error(String(error)));
+      this.logger.error(
+        'Failed to save payment with event',
+        error instanceof Error ? error : new Error(String(error))
+      );
       throw error;
     }
   }
@@ -385,7 +377,10 @@ export class TransactionalPaymentService {
       currency: payment.amount.currency,
       paymentMethod: payment.paymentMethod.type,
       customerCountry: payment.customer.billingAddress?.country,
-      merchantId: typeof payment.metadata.merchantData?.merchantId === 'string' ? payment.metadata.merchantData.merchantId : undefined,
+      merchantId:
+        typeof payment.metadata.merchantData?.merchantId === 'string'
+          ? payment.metadata.merchantData.merchantId
+          : undefined,
       metadata: { ...payment.metadata },
     };
     return this.router.route(context) ?? GatewayType.MOCK;

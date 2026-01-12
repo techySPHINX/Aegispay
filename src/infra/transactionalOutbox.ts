@@ -1,21 +1,21 @@
 /**
  * TRANSACTIONAL OUTBOX PATTERN
- * 
+ *
  * This module implements the transactional outbox pattern to achieve exactly-once
  * event delivery semantics. It solves the dual-write problem where you need to:
  * 1. Update application state (e.g., payment status)
  * 2. Publish events (e.g., PaymentSucceeded)
- * 
+ *
  * Without an outbox, these operations are NOT atomic:
  * - State update succeeds + Event publish fails = State changed but no notification
  * - State update fails + Event publish succeeds = Event sent but state inconsistent
- * 
+ *
  * THE SOLUTION:
  * 1. Write state changes AND events to database in SAME transaction (atomic)
  * 2. Background publisher reads unpublished events and publishes them
  * 3. Mark events as published after successful delivery
  * 4. Retry on failure with idempotency
- * 
+ *
  * GUARANTEES:
  * - At-least-once delivery (events never lost)
  * - Exactly-once processing (via consumer idempotency)
@@ -78,10 +78,10 @@ export interface OutboxEntry {
 }
 
 export enum OutboxStatus {
-  PENDING = 'PENDING',           // Not yet published
-  PUBLISHED = 'PUBLISHED',       // Successfully published
-  FAILED = 'FAILED',             // Permanently failed after max retries
-  PROCESSING = 'PROCESSING',     // Currently being published
+  PENDING = 'PENDING', // Not yet published
+  PUBLISHED = 'PUBLISHED', // Successfully published
+  FAILED = 'FAILED', // Permanently failed after max retries
+  PROCESSING = 'PROCESSING', // Currently being published
 }
 
 // ============================================================================
@@ -90,7 +90,7 @@ export enum OutboxStatus {
 
 /**
  * Persistence interface for the transactional outbox
- * 
+ *
  * In production, this would be backed by:
  * - PostgreSQL table with outbox entries
  * - MongoDB collection with outbox documents
@@ -265,18 +265,18 @@ export interface OutboxPublisherConfig {
 }
 
 export const DEFAULT_OUTBOX_CONFIG: OutboxPublisherConfig = {
-  pollInterval: 1000,        // Poll every 1 second
-  batchSize: 100,            // Process 100 entries per batch
-  maxRetries: 10,            // Retry up to 10 times
-  retryBaseDelay: 1000,      // Start with 1 second delay
-  retryMaxDelay: 60000,      // Max 1 minute delay
-  enableCleanup: true,       // Enable cleanup
-  cleanupAge: 86400000,      // Clean up after 24 hours
+  pollInterval: 1000, // Poll every 1 second
+  batchSize: 100, // Process 100 entries per batch
+  maxRetries: 10, // Retry up to 10 times
+  retryBaseDelay: 1000, // Start with 1 second delay
+  retryMaxDelay: 60000, // Max 1 minute delay
+  enableCleanup: true, // Enable cleanup
+  cleanupAge: 86400000, // Clean up after 24 hours
 };
 
 /**
  * Outbox Publisher - Background worker that publishes events from the outbox
- * 
+ *
  * This is the "relay" that ensures events are eventually delivered to the event bus
  */
 export class OutboxPublisher {
@@ -288,7 +288,7 @@ export class OutboxPublisher {
     private store: OutboxStore,
     private eventBus: EventBus,
     private config: OutboxPublisherConfig = DEFAULT_OUTBOX_CONFIG
-  ) { }
+  ) {}
 
   /**
    * Start the publisher (begins polling for events)
@@ -351,7 +351,6 @@ export class OutboxPublisher {
       if (this.config.enableCleanup) {
         await this.cleanupIfNeeded();
       }
-
     } finally {
       // Schedule next poll
       this.scheduleNextPoll();
@@ -376,7 +375,6 @@ export class OutboxPublisher {
       await this.store.markPublished(entry.id);
 
       console.log(`[OutboxPublisher] Published event ${entry.id} (${entry.eventType})`);
-
     } catch (error) {
       // Handle failure
       await this.handlePublishFailure(entry, error);
@@ -406,9 +404,7 @@ export class OutboxPublisher {
 
       await this.store.markFailed(entry.id, errorMessage, nextRetryAt);
 
-      console.log(
-        `[OutboxPublisher] Will retry entry ${entry.id} at ${nextRetryAt.toISOString()}`
-      );
+      console.log(`[OutboxPublisher] Will retry entry ${entry.id} at ${nextRetryAt.toISOString()}`);
     } else {
       // Max retries exceeded - mark as permanently failed
       await this.store.markFailed(entry.id, errorMessage, null);
@@ -486,12 +482,12 @@ export class OutboxPublisher {
 
 /**
  * Transactional Event Bus - Wraps event bus with transactional outbox
- * 
+ *
  * Instead of publishing events directly, this saves them to the outbox
  * in the same transaction as state changes
  */
 export class TransactionalEventBus {
-  constructor(private outboxStore: OutboxStore) { }
+  constructor(private outboxStore: OutboxStore) {}
 
   /**
    * Save event to outbox (to be published later)

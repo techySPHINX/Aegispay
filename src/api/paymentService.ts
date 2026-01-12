@@ -31,7 +31,10 @@ import { EventBus } from '../infra/eventBus';
 import { GatewayRegistry } from '../gateways/registry';
 import { PaymentRouter, RoutingContext } from '../orchestration/router';
 import { RetryPolicy } from '../orchestration/retryPolicy';
-import { CircuitBreaker, CircuitBreakerHealthTracker } from '../orchestration/enhancedCircuitBreaker';
+import {
+  CircuitBreaker,
+  CircuitBreakerHealthTracker,
+} from '../orchestration/enhancedCircuitBreaker';
 import { Logger, MetricsCollector } from '../infra/observability';
 import { GatewayError, PaymentGateway } from '../gateways/gateway';
 import { LockManager, InMemoryLockManager, withLock } from '../infra/lockManager';
@@ -80,9 +83,7 @@ export class PaymentService {
    * Create a new payment (Idempotent)
    * Includes comprehensive input validation
    */
-  async createPayment(
-    request: CreatePaymentRequest
-  ): Promise<Result<Payment, Error>> {
+  async createPayment(request: CreatePaymentRequest): Promise<Result<Payment, Error>> {
     const startTime = Date.now();
 
     try {
@@ -121,9 +122,7 @@ export class PaymentService {
 
       // If any validation errors, return early
       if (validationErrors.length > 0) {
-        const errorMessage = validationErrors
-          .map((e) => `${e.field}: ${e.message}`)
-          .join('; ');
+        const errorMessage = validationErrors.map((e) => `${e.field}: ${e.message}`).join('; ');
 
         this.logger.warn('Payment creation validation failed', {
           errors: validationErrors,
@@ -138,9 +137,7 @@ export class PaymentService {
       }
 
       // Sanitize metadata
-      const sanitizedMetadata = request.metadata
-        ? sanitizeMetadata(request.metadata)
-        : {};
+      const sanitizedMetadata = request.metadata ? sanitizeMetadata(request.metadata) : {};
 
       // Use lock to prevent concurrent creates with same idempotency key
       return await withLock(
@@ -179,7 +176,10 @@ export class PaymentService {
 
           // Emit event
           await this.publishEvent(
-            PaymentEventFactory.createPaymentInitiated(savedPayment, this.getNextVersion(payment.id))
+            PaymentEventFactory.createPaymentInitiated(
+              savedPayment,
+              this.getNextVersion(payment.id)
+            )
           );
 
           const duration = Date.now() - startTime;
@@ -213,18 +213,14 @@ export class PaymentService {
    * Process a payment through the orchestration flow
    * Includes production-ready error handling and validation
    */
-  async processPayment(
-    request: ProcessPaymentRequest
-  ): Promise<Result<Payment, Error>> {
+  async processPayment(request: ProcessPaymentRequest): Promise<Result<Payment, Error>> {
     const startTime = Date.now();
 
     try {
       // PRODUCTION: Validate payment ID
       const idValidation = validatePaymentId(request.paymentId);
       if (!idValidation.valid) {
-        const errorMessage = idValidation.errors
-          .map((e) => e.message)
-          .join('; ');
+        const errorMessage = idValidation.errors.map((e) => e.message).join('; ');
 
         this.logger.warn('Invalid payment ID', {
           paymentId: request.paymentId,
@@ -380,10 +376,7 @@ export class PaymentService {
 
     // Emit processing event
     await this.publishEvent(
-      PaymentEventFactory.createPaymentProcessing(
-        updatedPayment,
-        this.getNextVersion(payment.id)
-      )
+      PaymentEventFactory.createPaymentProcessing(updatedPayment, this.getNextVersion(payment.id))
     );
 
     // Process
@@ -396,7 +389,8 @@ export class PaymentService {
 
     if (processResult.isFailure || !processResult.value.success) {
       throw new Error(
-        `Payment processing failed: ${processResult.isFailure ? processResult.error : 'Unknown error'
+        `Payment processing failed: ${
+          processResult.isFailure ? processResult.error : 'Unknown error'
         }`
       );
     }
@@ -406,10 +400,7 @@ export class PaymentService {
 
     // Emit success event
     await this.publishEvent(
-      PaymentEventFactory.createPaymentSucceeded(
-        updatedPayment,
-        this.getNextVersion(payment.id)
-      )
+      PaymentEventFactory.createPaymentSucceeded(updatedPayment, this.getNextVersion(payment.id))
     );
 
     return updatedPayment;

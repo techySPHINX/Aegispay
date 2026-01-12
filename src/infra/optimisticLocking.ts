@@ -1,8 +1,8 @@
 /**
  * OPTIMISTIC LOCKING FOR CONCURRENCY CONTROL
- * 
+ *
  * Prevents race conditions and lost updates in concurrent environments.
- * 
+ *
  * PROBLEM: Lost Update
  * ==================
  * Time  Thread-1              Thread-2
@@ -12,7 +12,7 @@
  * T3    Update status → PAID
  * T4                          Update status → REFUNDED
  * T5    Write (overwrites!)   ← LOST UPDATE!
- * 
+ *
  * SOLUTION: Optimistic Locking
  * ===========================
  * Time  Thread-1                    Thread-2
@@ -24,7 +24,7 @@
  * T4                                Update IF version=1 (✗)
  *                                   → CONFLICT DETECTED!
  *                                   → Retry with version=2
- * 
+ *
  * KEY PRINCIPLES:
  * 1. Every entity has a version number
  * 2. Updates include version check: UPDATE WHERE id=X AND version=Y
@@ -42,8 +42,9 @@ export class OptimisticLockError extends Error {
   ) {
     super(
       `Optimistic lock failed for ${entityType}[${entityId}]. ` +
-      `Expected version ${expectedVersion}, but entity was ${actualVersion !== null ? `at version ${actualVersion}` : 'not found or already modified'
-      }`
+        `Expected version ${expectedVersion}, but entity was ${
+          actualVersion !== null ? `at version ${actualVersion}` : 'not found or already modified'
+        }`
     );
     this.name = 'OptimisticLockError';
     Object.setPrototypeOf(this, OptimisticLockError.prototype);
@@ -59,7 +60,7 @@ export class MaxRetriesExceededError extends Error {
   ) {
     super(
       `Maximum retries (${attempts}) exceeded for ${entityType}[${entityId}]. ` +
-      `Last error: ${lastError.message}`
+        `Last error: ${lastError.message}`
     );
     this.name = 'MaxRetriesExceededError';
     Object.setPrototypeOf(this, MaxRetriesExceededError.prototype);
@@ -97,7 +98,7 @@ export interface OptimisticLockConfig {
   initialBackoffMs: number;
   maxBackoffMs: number;
   backoffMultiplier: number;
-  jitterFactor: number;          // 0-1, randomization to prevent thundering herd
+  jitterFactor: number; // 0-1, randomization to prevent thundering herd
 }
 
 export const DEFAULT_OPTIMISTIC_CONFIG: OptimisticLockConfig = {
@@ -112,11 +113,11 @@ export const DEFAULT_OPTIMISTIC_CONFIG: OptimisticLockConfig = {
  * Optimistic Locking Manager
  */
 export class OptimisticLockManager {
-  constructor(private config: OptimisticLockConfig = DEFAULT_OPTIMISTIC_CONFIG) { }
+  constructor(private config: OptimisticLockConfig = DEFAULT_OPTIMISTIC_CONFIG) {}
 
   /**
    * Execute operation with optimistic locking and automatic retry
-   * 
+   *
    * @param entityType - Type of entity (for logging)
    * @param entityId - Entity ID
    * @param operation - Function that reads, modifies, and writes entity
@@ -139,8 +140,8 @@ export class OptimisticLockManager {
         if (result.success) {
           console.log(
             `[OptimisticLock] ${entityType}[${entityId}]: ` +
-            `Update succeeded on attempt ${attempt} ` +
-            `(v${result.previousVersion} → v${result.newVersion})`
+              `Update succeeded on attempt ${attempt} ` +
+              `(v${result.previousVersion} → v${result.newVersion})`
           );
 
           if (!result.entity) {
@@ -153,8 +154,8 @@ export class OptimisticLockManager {
         if (result.conflictDetected) {
           console.warn(
             `[OptimisticLock] ${entityType}[${entityId}]: ` +
-            `Conflict detected on attempt ${attempt} ` +
-            `(expected v${result.previousVersion}). Retrying...`
+              `Conflict detected on attempt ${attempt} ` +
+              `(expected v${result.previousVersion}). Retrying...`
           );
 
           // Exponential backoff with jitter
@@ -166,14 +167,13 @@ export class OptimisticLockManager {
 
         // Unknown failure
         throw new Error(`Operation failed without conflict detection`);
-
       } catch (error) {
         lastError = error as Error;
 
         if (error instanceof OptimisticLockError) {
           console.warn(
             `[OptimisticLock] ${entityType}[${entityId}]: ` +
-            `Lock error on attempt ${attempt}: ${error.message}`
+              `Lock error on attempt ${attempt}: ${error.message}`
           );
 
           // Retry on lock errors
@@ -247,8 +247,9 @@ export interface VersionedRepository<T extends Versioned> {
 /**
  * In-memory implementation for testing
  */
-export class InMemoryVersionedRepository<T extends Versioned & { id: string }>
-  implements VersionedRepository<T> {
+export class InMemoryVersionedRepository<
+  T extends Versioned & { id: string },
+> implements VersionedRepository<T> {
   private store: Map<string, T> = new Map();
 
   async findById(id: string): Promise<T | null> {
@@ -325,9 +326,7 @@ export class InMemoryVersionedRepository<T extends Versioned & { id: string }>
    * Get all entities (for testing)
    */
   getAll(): T[] {
-    return Array.from(this.store.values()).map((e) =>
-      JSON.parse(JSON.stringify(e))
-    );
+    return Array.from(this.store.values()).map((e) => JSON.parse(JSON.stringify(e)));
   }
 }
 
@@ -359,32 +358,24 @@ export class VersionedPaymentService {
    * Update payment status with automatic retry on conflicts
    */
   async updateStatus(paymentId: string, newStatus: string): Promise<VersionedPayment> {
-    return this.lockManager.executeWithRetry(
-      'Payment',
-      paymentId,
-      async () => {
-        // 1. Read current version
-        const payment = await this.repository.findById(paymentId);
+    return this.lockManager.executeWithRetry('Payment', paymentId, async () => {
+      // 1. Read current version
+      const payment = await this.repository.findById(paymentId);
 
-        if (!payment) {
-          throw new Error(`Payment ${paymentId} not found`);
-        }
-
-        // 2. Modify
-        const updated: VersionedPayment = {
-          ...payment,
-          status: newStatus,
-          updatedAt: new Date(),
-        };
-
-        // 3. Write with version check
-        return await this.repository.updateWithVersion(
-          paymentId,
-          updated,
-          payment.version
-        );
+      if (!payment) {
+        throw new Error(`Payment ${paymentId} not found`);
       }
-    );
+
+      // 2. Modify
+      const updated: VersionedPayment = {
+        ...payment,
+        status: newStatus,
+        updatedAt: new Date(),
+      };
+
+      // 3. Write with version check
+      return await this.repository.updateWithVersion(paymentId, updated, payment.version);
+    });
   }
 
   /**
@@ -395,35 +386,27 @@ export class VersionedPaymentService {
     expectedStatus: string,
     newStatus: string
   ): Promise<VersionedPayment> {
-    return this.lockManager.executeWithRetry(
-      'Payment',
-      paymentId,
-      async () => {
-        const payment = await this.repository.findById(paymentId);
+    return this.lockManager.executeWithRetry('Payment', paymentId, async () => {
+      const payment = await this.repository.findById(paymentId);
 
-        if (!payment) {
-          throw new Error(`Payment ${paymentId} not found`);
-        }
+      if (!payment) {
+        throw new Error(`Payment ${paymentId} not found`);
+      }
 
-        // Business logic check
-        if (payment.status !== expectedStatus) {
-          throw new Error(
-            `Cannot update: expected status '${expectedStatus}' but found '${payment.status}'`
-          );
-        }
-
-        const updated: VersionedPayment = {
-          ...payment,
-          status: newStatus,
-          updatedAt: new Date(),
-        };
-
-        return await this.repository.updateWithVersion(
-          paymentId,
-          updated,
-          payment.version
+      // Business logic check
+      if (payment.status !== expectedStatus) {
+        throw new Error(
+          `Cannot update: expected status '${expectedStatus}' but found '${payment.status}'`
         );
       }
-    );
+
+      const updated: VersionedPayment = {
+        ...payment,
+        status: newStatus,
+        updatedAt: new Date(),
+      };
+
+      return await this.repository.updateWithVersion(paymentId, updated, payment.version);
+    });
   }
 }

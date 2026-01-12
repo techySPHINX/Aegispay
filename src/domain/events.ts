@@ -165,10 +165,7 @@ export class PaymentEventFactory {
   /**
    * Create Payment Authenticated Event
    */
-  static createPaymentAuthenticated(
-    payment: Payment,
-    version: number
-  ): PaymentAuthenticatedEvent {
+  static createPaymentAuthenticated(payment: Payment, version: number): PaymentAuthenticatedEvent {
     if (!payment.gatewayType) {
       throw new Error('Gateway type must be set for authenticated payment');
     }

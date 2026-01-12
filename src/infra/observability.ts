@@ -1,52 +1,52 @@
 /**
  * OBSERVABILITY AS A FIRST-CLASS FEATURE
- * 
+ *
  * Production-grade observability with:
  * - Structured logging with correlation IDs
  * - Metrics for latency, retries, failures
  * - Trace propagation across services
  * - Performance monitoring
- * 
+ *
  * HOW OBSERVABILITY HELPS DEBUG PAYMENT FAILURES:
  * ================================================
  * 1. CORRELATION IDS: Track a payment across services
  *    - Payment ID links logs from gateway, DB, events
  *    - Trace ID connects distributed operations
  *    - Can reconstruct entire payment flow
- * 
+ *
  * 2. STRUCTURED LOGGING: Filter and search efficiently
  *    - JSON format enables log aggregation (ELK, Splunk)
  *    - Context fields allow precise queries
  *    - Example: Find all failed Stripe payments for customer X
- * 
+ *
  * 3. METRICS: Identify patterns and anomalies
  *    - Latency spikes indicate gateway problems
  *    - Retry count shows transient failures
  *    - Success rate per gateway guides routing
- * 
+ *
  * 4. TRACES: Understand performance bottlenecks
  *    - See which operation takes longest
  *    - Identify slow database queries
  *    - Detect network delays
- * 
+ *
  * 5. ALERTS: Proactive issue detection
  *    - High error rate triggers alerts
  *    - Latency SLA breaches notify on-call
  *    - Circuit breaker opens indicate problems
- * 
+ *
  * PRODUCTION DEBUGGING EXAMPLE:
  * ==============================
  * Problem: Customer reports failed payment
- * 
+ *
  * Step 1: Search logs by paymentId
  * → Find: "Payment initiated", "Gateway timeout", "Retry attempt 1"
- * 
+ *
  * Step 2: Check metrics
  * → Gateway latency spike at same timestamp
- * 
+ *
  * Step 3: Check traces
  * → Gateway call took 30s (timeout = 10s)
- * 
+ *
  * Conclusion: Gateway performance issue, not our bug
  * Action: Switch to backup gateway, contact provider
  */
@@ -62,9 +62,9 @@ export interface LogContext {
   // Core identifiers for correlation
   paymentId?: string;
   customerId?: string;
-  correlationId?: string;        // NEW: Links related operations
-  traceId?: string;              // NEW: Distributed tracing ID
-  spanId?: string;               // NEW: Span within trace
+  correlationId?: string; // NEW: Links related operations
+  traceId?: string; // NEW: Distributed tracing ID
+  spanId?: string; // NEW: Span within trace
 
   // Operation context
   gatewayType?: string;
@@ -72,8 +72,8 @@ export interface LogContext {
   duration?: number;
 
   // Performance metrics
-  retryCount?: number;           // NEW: Number of retries
-  attemptNumber?: number;        // NEW: Current attempt
+  retryCount?: number; // NEW: Number of retries
+  attemptNumber?: number; // NEW: Current attempt
 
   // Additional context
   [key: string]: unknown;
@@ -350,7 +350,10 @@ export class InMemoryMetricsCollector implements MetricsCollector {
   }
 
   getMetrics(): MetricsSnapshot {
-    const timingsStats: Record<string, { count: number; sum: number; avg: number; min: number; max: number }> = {};
+    const timingsStats: Record<
+      string,
+      { count: number; sum: number; avg: number; min: number; max: number }
+    > = {};
 
     this.timings.forEach((values, key) => {
       if (values.length > 0) {
@@ -395,22 +398,19 @@ export class InMemoryMetricsCollector implements MetricsCollector {
 
 /**
  * OBSERVABILITY FACADE
- * 
+ *
  * Combines logging, metrics, and tracing in one interface
  */
 export class ObservabilityManager {
   constructor(
     private logger: Logger,
     private metrics: MetricsCollector
-  ) { }
+  ) {}
 
   /**
    * Create observability context for an operation
    */
-  createContext(
-    operation: string,
-    baseContext: LogContext = {}
-  ): ObservabilityContext {
+  createContext(operation: string, baseContext: LogContext = {}): ObservabilityContext {
     const correlationId = generateId();
     const traceContext = createTraceContext();
 
@@ -437,7 +437,8 @@ export class ObservabilityManager {
 
       // Record success
       recordSuccess: (additionalContext?: LogContext): void => {
-        const startTimeValue = typeof context.startTime === 'number' ? context.startTime : Date.now();
+        const startTimeValue =
+          typeof context.startTime === 'number' ? context.startTime : Date.now();
         const duration = Date.now() - startTimeValue;
         childLogger.info(`${operation} succeeded`, {
           ...additionalContext,
@@ -449,7 +450,8 @@ export class ObservabilityManager {
 
       // Record failure
       recordFailure: (error: Error, additionalContext?: LogContext): void => {
-        const startTimeValue = typeof context.startTime === 'number' ? context.startTime : Date.now();
+        const startTimeValue =
+          typeof context.startTime === 'number' ? context.startTime : Date.now();
         const duration = Date.now() - startTimeValue;
         childLogger.error(`${operation} failed`, error, {
           ...additionalContext,

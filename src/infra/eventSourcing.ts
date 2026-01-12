@@ -1,9 +1,9 @@
 /**
  * Event Sourcing & Crash Recovery
- * 
+ *
  * This module implements event sourcing to guarantee correctness
  * even when the process crashes mid-payment.
- * 
+ *
  * Key guarantees:
  * 1. Every state change is persisted as an immutable event
  * 2. Current state can be reconstructed from events
@@ -79,10 +79,7 @@ export class InMemoryEventStore implements EventStore {
     return this.events.get(paymentId) || [];
   }
 
-  async getEventsAfterVersion(
-    paymentId: string,
-    afterVersion: number
-  ): Promise<PaymentEvent[]> {
+  async getEventsAfterVersion(paymentId: string, afterVersion: number): Promise<PaymentEvent[]> {
     const allEvents = this.events.get(paymentId) || [];
     return allEvents.filter((e) => e.version > afterVersion);
   }
@@ -122,7 +119,7 @@ export class InMemoryEventStore implements EventStore {
 
 /**
  * Event Sourcing Coordinator
- * 
+ *
  * Manages the event sourcing lifecycle:
  * - Capturing state changes as events
  * - Reconstructing state from events
@@ -137,11 +134,11 @@ export class EventSourcingCoordinator {
       warn: (msg: string, ctx?: Record<string, unknown>) => void;
       debug: (msg: string, ctx?: Record<string, unknown>) => void;
     }
-  ) { }
+  ) {}
 
   /**
    * Persist state change as event
-   * 
+   *
    * This is called after every domain operation to capture the state change.
    * The event is the source of truth, not the database state.
    */
@@ -164,7 +161,7 @@ export class EventSourcingCoordinator {
 
   /**
    * Reconstruct payment state from events
-   * 
+   *
    * This is the core of event sourcing: we can always rebuild
    * the current state by replaying all events.
    */
@@ -217,13 +214,13 @@ export class EventSourcingCoordinator {
     // For now, throw error indicating this needs implementation
     throw new Error(
       `Payment reconstruction from events not fully implemented for event type: ${event.eventType}. ` +
-      'In production, store payment snapshots in events or query repository.'
+        'In production, store payment snapshots in events or query repository.'
     );
   }
 
   /**
    * Verify event continuity
-   * 
+   *
    * Ensures there are no gaps in the event stream, which would
    * indicate data corruption or partial writes.
    */
@@ -233,18 +230,14 @@ export class EventSourcingCoordinator {
       const actualVersion = events[i].version;
 
       if (actualVersion !== expectedVersion) {
-        throw new EventContinuityError(
-          events[i].aggregateId,
-          expectedVersion,
-          actualVersion
-        );
+        throw new EventContinuityError(events[i].aggregateId, expectedVersion, actualVersion);
       }
     }
   }
 
   /**
    * Recover from crash
-   * 
+   *
    * This is called when the system restarts after a crash.
    * It identifies payments that were in-flight and recovers them.
    */
@@ -358,7 +351,7 @@ export class EventSourcingCoordinator {
 
   /**
    * Get payment history
-   * 
+   *
    * Returns the complete audit trail of a payment.
    */
   async getPaymentHistory(paymentId: string): Promise<PaymentHistory> {

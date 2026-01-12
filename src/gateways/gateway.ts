@@ -35,10 +35,7 @@ export interface PaymentGateway {
   /**
    * Refund a payment
    */
-  refund(
-    payment: Payment,
-    amount?: number
-  ): Promise<Result<GatewayRefundResponse, GatewayError>>;
+  refund(payment: Payment, amount?: number): Promise<Result<GatewayRefundResponse, GatewayError>>;
 
   /**
    * Get payment status from gateway

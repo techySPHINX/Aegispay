@@ -1,6 +1,6 @@
 /**
  * State Machine Demonstration
- * 
+ *
  * This file demonstrates the formal payment state machine with:
  * - Valid and invalid transitions
  * - Invariant enforcement
@@ -9,7 +9,14 @@
  */
 
 import { Payment } from '../domain/payment';
-import { PaymentState, Money, Currency, PaymentMethodType, GatewayType, CardDetails } from '../domain/types';
+import {
+  PaymentState,
+  Money,
+  Currency,
+  PaymentMethodType,
+  GatewayType,
+  CardDetails,
+} from '../domain/types';
 import {
   PaymentStateMachine,
   visualizeStateMachine,
@@ -44,7 +51,7 @@ let payment = new Payment({
   id: 'pay_demo_001',
   idempotencyKey: 'idem_demo_001',
   state: PaymentState.INITIATED,
-  amount: new Money(100.00, Currency.USD),
+  amount: new Money(100.0, Currency.USD),
   paymentMethod: {
     type: PaymentMethodType.CARD,
     details: {
@@ -163,7 +170,10 @@ try {
 
 // Check terminal state property
 console.log('\nIs SUCCESS terminal?', PaymentStateMachine.isTerminalState(PaymentState.SUCCESS));
-console.log('Is PROCESSING terminal?', PaymentStateMachine.isTerminalState(PaymentState.PROCESSING));
+console.log(
+  'Is PROCESSING terminal?',
+  PaymentStateMachine.isTerminalState(PaymentState.PROCESSING)
+);
 
 // ============================================================================
 // DEMO 5: State Metadata & Introspection
@@ -208,11 +218,7 @@ console.log('Process 1: Successfully transitions to AUTHENTICATED\n');
 
 // Process 1 succeeds
 try {
-  compareAndSwapTransition(
-    expectedState,
-    actualStateProcess1,
-    PaymentState.AUTHENTICATED
-  );
+  compareAndSwapTransition(expectedState, actualStateProcess1, PaymentState.AUTHENTICATED);
   console.log('✓ Process 1: CAS succeeded (INITIATED → AUTHENTICATED)');
 } catch (error) {
   console.log('✗ Process 1: CAS failed:', error);
@@ -285,9 +291,9 @@ console.log('══════════════════════�
 console.log('All states:', StateMachineProperties.states);
 console.log('Initial state:', StateMachineProperties.initialState);
 console.log('Terminal states:', StateMachineProperties.terminalStates);
-console.log('Total transitions defined:',
-  Array.from(StateMachineProperties.transitionMap.values())
-    .reduce((sum, set) => sum + set.size, 0)
+console.log(
+  'Total transitions defined:',
+  Array.from(StateMachineProperties.transitionMap.values()).reduce((sum, set) => sum + set.size, 0)
 );
 
 console.log('\n═══════════════════════════════════════════════════════════');

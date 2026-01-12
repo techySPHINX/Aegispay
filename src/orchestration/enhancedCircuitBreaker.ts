@@ -1,6 +1,6 @@
 /**
  * ENHANCED CIRCUIT BREAKER WITH HEALTH TRACKING
- * 
+ *
  * This is the unified circuit breaker implementation that combines:
  * - Basic circuit breaker functionality
  * - Comprehensive health metrics
@@ -8,22 +8,22 @@
  * - Adaptive thresholds based on historical data
  * - Health score calculation
  * - Cascading failure prevention
- * 
+ *
  * HOW IT IMPROVES AVAILABILITY:
- * 
+ *
  * Without Circuit Breakers:
  * - Slow/failing gateway causes request pile-up
  * - Resources (threads, connections) exhausted
  * - Cascading failures across entire system
  * - Long recovery time
- * 
+ *
  * With Circuit Breakers:
  * - Fast failure when gateway is down
  * - Resources freed immediately
  * - Other gateways can handle traffic
  * - Automatic recovery detection
  * - Gradual traffic ramp-up
- * 
+ *
  * This replaces the basic circuitBreaker.ts with enhanced functionality.
  */
 
@@ -34,9 +34,9 @@ import { GatewayType } from '../domain/types';
 // ============================================================================
 
 export enum CircuitState {
-  CLOSED = 'CLOSED',           // Normal operation - all requests pass through
-  OPEN = 'OPEN',               // Failing fast - reject all requests
-  HALF_OPEN = 'HALF_OPEN',     // Testing recovery - allow limited requests
+  CLOSED = 'CLOSED', // Normal operation - all requests pass through
+  OPEN = 'OPEN', // Failing fast - reject all requests
+  HALF_OPEN = 'HALF_OPEN', // Testing recovery - allow limited requests
 }
 
 // ============================================================================
@@ -49,17 +49,17 @@ export enum CircuitState {
 export interface GatewayHealth {
   gatewayType: GatewayType;
   circuitState: CircuitState;
-  healthScore: number;              // 0.0 (unhealthy) to 1.0 (healthy)
+  healthScore: number; // 0.0 (unhealthy) to 1.0 (healthy)
 
   // Failure tracking
   consecutiveFailures: number;
   totalFailures: number;
-  failureRate: number;              // 0.0 to 1.0
+  failureRate: number; // 0.0 to 1.0
 
   // Success tracking
   consecutiveSuccesses: number;
   totalSuccesses: number;
-  successRate: number;              // 0.0 to 1.0
+  successRate: number; // 0.0 to 1.0
 
   // Timing
   lastRequestTime: Date | null;
@@ -68,9 +68,9 @@ export interface GatewayHealth {
   stateChangedAt: Date;
 
   // Circuit breaker details
-  openCount: number;                // How many times circuit has opened
-  halfOpenAttempts: number;         // Attempts made in half-open state
-  timeUntilRetry: number;           // Ms until next retry attempt
+  openCount: number; // How many times circuit has opened
+  halfOpenAttempts: number; // Attempts made in half-open state
+  timeUntilRetry: number; // Ms until next retry attempt
 }
 
 /**
@@ -156,17 +156,13 @@ export class CircuitBreakerHealthTracker {
     const health = this.health.get(gatewayType);
     if (!health) return true; // No data = assume healthy
 
-    return health.circuitState === CircuitState.CLOSED &&
-      health.healthScore >= minHealthScore;
+    return health.circuitState === CircuitState.CLOSED && health.healthScore >= minHealthScore;
   }
 
   /**
    * Get or create health entry
    */
-  private getOrCreateHealth(
-    gatewayType: GatewayType,
-    state: CircuitState
-  ): GatewayHealth {
+  private getOrCreateHealth(gatewayType: GatewayType, state: CircuitState): GatewayHealth {
     let health = this.health.get(gatewayType);
 
     if (!health) {
@@ -242,30 +238,30 @@ export class CircuitBreakerHealthTracker {
 
 export interface EnhancedCircuitBreakerConfig {
   // Failure thresholds
-  failureThreshold: number;         // Failures before opening circuit
-  failureRateThreshold: number;     // Failure rate (0-1) before opening
+  failureThreshold: number; // Failures before opening circuit
+  failureRateThreshold: number; // Failure rate (0-1) before opening
 
   // Success thresholds
-  successThreshold: number;         // Successes in half-open before closing
+  successThreshold: number; // Successes in half-open before closing
 
   // Timeouts
-  openTimeout: number;              // Time to stay open before trying half-open (ms)
-  halfOpenTimeout: number;          // Time to stay in half-open (ms)
+  openTimeout: number; // Time to stay open before trying half-open (ms)
+  halfOpenTimeout: number; // Time to stay in half-open (ms)
 
   // Half-open behavior
-  halfOpenMaxAttempts: number;      // Max requests to allow in half-open state
+  halfOpenMaxAttempts: number; // Max requests to allow in half-open state
 
   // Adaptive behavior
-  adaptiveThresholds: boolean;      // Adjust thresholds based on history
-  minHealthScore: number;           // Min health score to consider healthy
+  adaptiveThresholds: boolean; // Adjust thresholds based on history
+  minHealthScore: number; // Min health score to consider healthy
 }
 
 export const DEFAULT_ENHANCED_CONFIG: EnhancedCircuitBreakerConfig = {
   failureThreshold: 5,
   failureRateThreshold: 0.5,
   successThreshold: 3,
-  openTimeout: 60000,              // 1 minute
-  halfOpenTimeout: 30000,          // 30 seconds
+  openTimeout: 60000, // 1 minute
+  halfOpenTimeout: 30000, // 30 seconds
   halfOpenMaxAttempts: 5,
   adaptiveThresholds: true,
   minHealthScore: 0.5,
@@ -281,8 +277,8 @@ export class CircuitBreakerOpenError extends Error {
   ) {
     super(
       `Circuit breaker is OPEN for ${gatewayType}. ` +
-      `Health score: ${health.healthScore.toFixed(2)}. ` +
-      `Retry in ${Math.ceil(health.timeUntilRetry / 1000)}s`
+        `Health score: ${health.healthScore.toFixed(2)}. ` +
+        `Retry in ${Math.ceil(health.timeUntilRetry / 1000)}s`
     );
     this.name = 'CircuitBreakerOpenError';
     Object.setPrototypeOf(this, CircuitBreakerOpenError.prototype);
@@ -304,7 +300,7 @@ export class EnhancedCircuitBreaker {
     private gatewayType: GatewayType,
     private healthTracker: CircuitBreakerHealthTracker,
     private config: EnhancedCircuitBreakerConfig = DEFAULT_ENHANCED_CONFIG
-  ) { }
+  ) {}
 
   /**
    * Execute operation through circuit breaker
@@ -397,7 +393,10 @@ export class EnhancedCircuitBreaker {
 
       if (elapsed >= this.config.halfOpenTimeout) {
         // Timeout in half-open → back to open
-        this.transitionTo(CircuitState.OPEN, 'Half-open timeout elapsed without sufficient successes');
+        this.transitionTo(
+          CircuitState.OPEN,
+          'Half-open timeout elapsed without sufficient successes'
+        );
       }
     }
   }
@@ -433,9 +432,7 @@ export class EnhancedCircuitBreaker {
     // Update health tracker
     this.healthTracker.recordStateChange(this.gatewayType, newState, timeUntilRetry);
 
-    console.log(
-      `[CircuitBreaker] ${this.gatewayType}: ${oldState} → ${newState} (${reason})`
-    );
+    console.log(`[CircuitBreaker] ${this.gatewayType}: ${oldState} → ${newState} (${reason})`);
   }
 
   /**
@@ -453,9 +450,7 @@ export class EnhancedCircuitBreaker {
    */
   private cleanupOldRequests(): void {
     const cutoff = Date.now() - 300000; // Keep last 5 minutes
-    this.requestHistory = this.requestHistory.filter(
-      (r) => r.timestamp.getTime() > cutoff
-    );
+    this.requestHistory = this.requestHistory.filter((r) => r.timestamp.getTime() > cutoff);
   }
 
   /**
@@ -510,11 +505,7 @@ export class CircuitBreakerManager {
     let breaker = this.breakers.get(gatewayType);
 
     if (!breaker) {
-      breaker = new EnhancedCircuitBreaker(
-        gatewayType,
-        this.healthTracker,
-        this.config
-      );
+      breaker = new EnhancedCircuitBreaker(gatewayType, this.healthTracker, this.config);
       this.breakers.set(gatewayType, breaker);
     }
 

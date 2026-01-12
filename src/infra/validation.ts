@@ -1,6 +1,6 @@
 /**
  * PRODUCTION-GRADE INPUT VALIDATION
- * 
+ *
  * Comprehensive validation for all inputs to prevent security issues
  * and ensure data integrity.
  */
@@ -38,44 +38,29 @@ export function validateAmount(amount: number): ValidationResult {
 
   if (typeof amount !== 'number') {
     errors.push(
-      new ValidationError(
-        'Amount must be a number',
-        'amount',
-        amount,
-        { type: 'number' }
-      )
+      new ValidationError('Amount must be a number', 'amount', amount, { type: 'number' })
     );
   } else {
     if (!Number.isFinite(amount)) {
       errors.push(
-        new ValidationError(
-          'Amount must be a finite number',
-          'amount',
-          amount,
-          { finite: true }
-        )
+        new ValidationError('Amount must be a finite number', 'amount', amount, { finite: true })
       );
     }
 
     if (amount <= 0) {
       errors.push(
-        new ValidationError(
-          'Amount must be greater than zero',
-          'amount',
-          amount,
-          { min: 0, exclusive: true }
-        )
+        new ValidationError('Amount must be greater than zero', 'amount', amount, {
+          min: 0,
+          exclusive: true,
+        })
       );
     }
 
     if (amount > 999999999) {
       errors.push(
-        new ValidationError(
-          'Amount exceeds maximum allowed value',
-          'amount',
-          amount,
-          { max: 999999999 }
-        )
+        new ValidationError('Amount exceeds maximum allowed value', 'amount', amount, {
+          max: 999999999,
+        })
       );
     }
 
@@ -83,12 +68,10 @@ export function validateAmount(amount: number): ValidationResult {
     const decimalPlaces = (amount.toString().split('.')[1] || '').length;
     if (decimalPlaces > 2) {
       errors.push(
-        new ValidationError(
-          'Amount has too many decimal places',
-          'amount',
-          amount,
-          { maxDecimalPlaces: 2, actual: decimalPlaces }
-        )
+        new ValidationError('Amount has too many decimal places', 'amount', amount, {
+          maxDecimalPlaces: 2,
+          actual: decimalPlaces,
+        })
       );
     }
   }
@@ -107,22 +90,14 @@ export function validateCurrency(currency: unknown): ValidationResult {
 
   if (typeof currency !== 'string') {
     errors.push(
-      new ValidationError(
-        'Currency must be a string',
-        'currency',
-        currency,
-        { type: 'string' }
-      )
+      new ValidationError('Currency must be a string', 'currency', currency, { type: 'string' })
     );
   } else {
     if (!Object.values(Currency).includes(currency as Currency)) {
       errors.push(
-        new ValidationError(
-          `Invalid currency code: ${currency}`,
-          'currency',
-          currency,
-          { allowedValues: Object.values(Currency) }
-        )
+        new ValidationError(`Invalid currency code: ${currency}`, 'currency', currency, {
+          allowedValues: Object.values(Currency),
+        })
       );
     }
   }
@@ -141,45 +116,34 @@ export function validateIdempotencyKey(key: unknown): ValidationResult {
 
   if (typeof key !== 'string') {
     errors.push(
-      new ValidationError(
-        'Idempotency key must be a string',
-        'idempotencyKey',
-        key,
-        { type: 'string' }
-      )
+      new ValidationError('Idempotency key must be a string', 'idempotencyKey', key, {
+        type: 'string',
+      })
     );
   } else {
     if (key.length === 0) {
       errors.push(
-        new ValidationError(
-          'Idempotency key cannot be empty',
-          'idempotencyKey',
-          key,
-          { minLength: 1 }
-        )
+        new ValidationError('Idempotency key cannot be empty', 'idempotencyKey', key, {
+          minLength: 1,
+        })
       );
     }
 
     if (key.length > 255) {
       errors.push(
-        new ValidationError(
-          'Idempotency key is too long',
-          'idempotencyKey',
-          key,
-          { maxLength: 255, actual: key.length }
-        )
+        new ValidationError('Idempotency key is too long', 'idempotencyKey', key, {
+          maxLength: 255,
+          actual: key.length,
+        })
       );
     }
 
     // Check for valid characters (alphanumeric, dash, underscore)
     if (!/^[a-zA-Z0-9_-]+$/.test(key)) {
       errors.push(
-        new ValidationError(
-          'Idempotency key contains invalid characters',
-          'idempotencyKey',
-          key,
-          { allowedPattern: '^[a-zA-Z0-9_-]+$' }
-        )
+        new ValidationError('Idempotency key contains invalid characters', 'idempotencyKey', key, {
+          allowedPattern: '^[a-zA-Z0-9_-]+$',
+        })
       );
     }
   }
@@ -198,12 +162,7 @@ export function validateCustomer(customer: unknown): ValidationResult {
 
   if (!customer || typeof customer !== 'object') {
     errors.push(
-      new ValidationError(
-        'Customer must be an object',
-        'customer',
-        customer,
-        { type: 'object' }
-      )
+      new ValidationError('Customer must be an object', 'customer', customer, { type: 'object' })
     );
     return { valid: false, errors };
   }
@@ -237,12 +196,9 @@ export function validateCustomer(customer: unknown): ValidationResult {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(cust.email)) {
       errors.push(
-        new ValidationError(
-          'Invalid email format',
-          'customer.email',
-          cust.email,
-          { pattern: emailRegex.source }
-        )
+        new ValidationError('Invalid email format', 'customer.email', cust.email, {
+          pattern: emailRegex.source,
+        })
       );
     }
   }
@@ -251,21 +207,15 @@ export function validateCustomer(customer: unknown): ValidationResult {
   if (cust.phone !== undefined) {
     if (typeof cust.phone !== 'string') {
       errors.push(
-        new ValidationError(
-          'Customer phone must be a string',
-          'customer.phone',
-          cust.phone,
-          { type: 'string' }
-        )
+        new ValidationError('Customer phone must be a string', 'customer.phone', cust.phone, {
+          type: 'string',
+        })
       );
     } else if (cust.phone.length > 0 && cust.phone.length < 10) {
       errors.push(
-        new ValidationError(
-          'Customer phone number is too short',
-          'customer.phone',
-          cust.phone,
-          { minLength: 10 }
-        )
+        new ValidationError('Customer phone number is too short', 'customer.phone', cust.phone, {
+          minLength: 10,
+        })
       );
     }
   }
@@ -284,12 +234,9 @@ export function validatePaymentMethod(paymentMethod: unknown): ValidationResult 
 
   if (!paymentMethod || typeof paymentMethod !== 'object') {
     errors.push(
-      new ValidationError(
-        'Payment method must be an object',
-        'paymentMethod',
-        paymentMethod,
-        { type: 'object' }
-      )
+      new ValidationError('Payment method must be an object', 'paymentMethod', paymentMethod, {
+        type: 'object',
+      })
     );
     return { valid: false, errors };
   }
@@ -298,12 +245,9 @@ export function validatePaymentMethod(paymentMethod: unknown): ValidationResult 
 
   if (!pm.type || !Object.values(PaymentMethodType).includes(pm.type)) {
     errors.push(
-      new ValidationError(
-        'Invalid payment method type',
-        'paymentMethod.type',
-        pm.type,
-        { allowedValues: Object.values(PaymentMethodType) }
-      )
+      new ValidationError('Invalid payment method type', 'paymentMethod.type', pm.type, {
+        allowedValues: Object.values(PaymentMethodType),
+      })
     );
   }
 
@@ -312,12 +256,10 @@ export function validatePaymentMethod(paymentMethod: unknown): ValidationResult 
     const details = pm.details;
     if (!details || typeof details !== 'object') {
       errors.push(
-        new ValidationError(
-          'Card details are required',
-          'paymentMethod.details',
-          details,
-          { required: true, type: 'object' }
-        )
+        new ValidationError('Card details are required', 'paymentMethod.details', details, {
+          required: true,
+          type: 'object',
+        })
       );
     } else {
       // Basic card validation (in production, use proper validation library)
@@ -359,34 +301,21 @@ export function validatePaymentId(paymentId: unknown): ValidationResult {
 
   if (typeof paymentId !== 'string') {
     errors.push(
-      new ValidationError(
-        'Payment ID must be a string',
-        'paymentId',
-        paymentId,
-        { type: 'string' }
-      )
+      new ValidationError('Payment ID must be a string', 'paymentId', paymentId, { type: 'string' })
     );
   } else {
     if (paymentId.length === 0) {
       errors.push(
-        new ValidationError(
-          'Payment ID cannot be empty',
-          'paymentId',
-          paymentId,
-          { minLength: 1 }
-        )
+        new ValidationError('Payment ID cannot be empty', 'paymentId', paymentId, { minLength: 1 })
       );
     }
 
     // Validate format if using generated IDs
     if (!paymentId.startsWith('pay_')) {
       errors.push(
-        new ValidationError(
-          'Payment ID must start with "pay_"',
-          'paymentId',
-          paymentId,
-          { prefix: 'pay_' }
-        )
+        new ValidationError('Payment ID must start with "pay_"', 'paymentId', paymentId, {
+          prefix: 'pay_',
+        })
       );
     }
   }
@@ -400,9 +329,7 @@ export function validatePaymentId(paymentId: unknown): ValidationResult {
 /**
  * Sanitize metadata to prevent injection attacks
  */
-export function sanitizeMetadata(
-  metadata: Record<string, unknown>
-): Record<string, unknown> {
+export function sanitizeMetadata(metadata: Record<string, unknown>): Record<string, unknown> {
   const sanitized: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(metadata)) {

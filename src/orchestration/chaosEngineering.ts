@@ -1,8 +1,8 @@
 /**
  * CHAOS ENGINEERING & FAILURE SIMULATION
- * 
+ *
  * Validate system resilience by injecting controlled failures.
- * 
+ *
  * WHY CHAOS TESTING?
  * ==================
  * 1. Find bugs before production
@@ -11,40 +11,40 @@
  * 4. Test retry logic and backoff strategies
  * 5. Verify observability (logging, metrics)
  * 6. Build confidence in system reliability
- * 
+ *
  * HOW CHAOS TESTING VALIDATES RESILIENCE:
  * ========================================
- * 
+ *
  * 1. DOUBLE PROCESSING PREVENTION
  *    Inject: Gateway timeout after payment processed
  *    Assert: Idempotency key prevents duplicate charge
  *    Validation: Check database for single payment record
- * 
+ *
  * 2. GRACEFUL DEGRADATION
  *    Inject: Primary gateway failure
  *    Assert: System falls back to secondary gateway
  *    Validation: Payment still succeeds with acceptable latency
- * 
+ *
  * 3. CIRCUIT BREAKER CORRECTNESS
  *    Inject: High failure rate on gateway
  *    Assert: Circuit breaker opens after threshold
  *    Validation: Requests fail fast without waiting
- * 
+ *
  * 4. RETRY LOGIC
  *    Inject: Intermittent network errors
  *    Assert: System retries with exponential backoff
  *    Validation: Eventually succeeds without manual intervention
- * 
+ *
  * 5. DATA CONSISTENCY
  *    Inject: Crash after payment initiation
  *    Assert: System recovers to consistent state
  *    Validation: No orphaned transactions, no lost money
- * 
+ *
  * 6. OBSERVABILITY VALIDATION
  *    Inject: Various failure scenarios
  *    Assert: All failures logged with correlation IDs
  *    Validation: Can reconstruct failure from logs
- * 
+ *
  * CHAOS PATTERNS IMPLEMENTED:
  * ===========================
  * 1. Latency Injection - Slow responses
@@ -56,7 +56,7 @@
  * 7. Network Partition - Gateway unreachable
  * 8. Crash Simulation - Sudden process termination (NEW)
  * 9. Data Corruption - Invalid responses (NEW)
- * 
+ *
  * CORRECTNESS INVARIANTS:
  * =======================
  * 1. Exactly-once processing (no double charges)
@@ -64,7 +64,7 @@
  * 3. State machine validity (no invalid transitions)
  * 4. Database consistency (no orphaned records)
  * 5. Audit trail completeness (all operations logged)
- * 
+ *
  * USAGE:
  * ======
  * const chaos = new ChaosGateway(realGateway, {
@@ -72,12 +72,18 @@
  *   latencyMs: { min: 100, max: 5000 },
  *   timeoutRate: 0.1,           // 10% timeouts
  * });
- * 
+ *
  * // Run chaos tests
  * await chaosOrchestrator.runExperiment(experiment);
  */
 
-import { PaymentGateway, GatewayInitiateResponse, GatewayAuthResponse, GatewayRefundResponse, GatewayStatusResponse } from '../gateways/gateway';
+import {
+  PaymentGateway,
+  GatewayInitiateResponse,
+  GatewayAuthResponse,
+  GatewayRefundResponse,
+  GatewayStatusResponse,
+} from '../gateways/gateway';
 import { Payment } from '../domain/payment';
 import { GatewayType, Result, fail, PaymentState } from '../domain/types';
 import { GatewayError, GatewayErrorCode, GatewayProcessResponse } from '../gateways/gateway';
@@ -90,28 +96,28 @@ export interface ChaosConfig {
   enabled: boolean;
 
   // Failure injection
-  failureRate: number;              // 0.0 - 1.0 (probability of failure)
-  errorTypes: ChaosErrorType[];     // Types of errors to inject
+  failureRate: number; // 0.0 - 1.0 (probability of failure)
+  errorTypes: ChaosErrorType[]; // Types of errors to inject
 
   // Latency injection
-  latencyRate: number;              // 0.0 - 1.0 (probability of delay)
+  latencyRate: number; // 0.0 - 1.0 (probability of delay)
   latencyMs: { min: number; max: number };
 
   // Timeout injection
-  timeoutRate: number;              // 0.0 - 1.0 (probability of timeout)
+  timeoutRate: number; // 0.0 - 1.0 (probability of timeout)
   timeoutMs: number;
 
   // Intermittent failures
   intermittentFailureWindow: number; // Time window for intermittent failures (ms)
-  intermittentFailureBurst: number;  // Number of failures in burst
+  intermittentFailureBurst: number; // Number of failures in burst
 
   // Advanced chaos
-  cascadeFailureRate: number;       // Probability of cascading to other gateways
-  resourceExhaustionRate: number;   // Simulate connection pool exhaustion
+  cascadeFailureRate: number; // Probability of cascading to other gateways
+  resourceExhaustionRate: number; // Simulate connection pool exhaustion
 
   // Control
-  seed: number;                     // Random seed for reproducibility
-  maxInjections: number;            // Max number of injections per experiment
+  seed: number; // Random seed for reproducibility
+  maxInjections: number; // Max number of injections per experiment
 }
 
 export enum ChaosErrorType {
@@ -161,11 +167,7 @@ export class ChaosInjectedError extends Error {
 
 export class ChaosTimeoutError extends ChaosInjectedError {
   constructor(gatewayType: GatewayType, timeoutMs: number) {
-    super(
-      ChaosErrorType.TIMEOUT,
-      gatewayType,
-      `Request timeout after ${timeoutMs}ms`
-    );
+    super(ChaosErrorType.TIMEOUT, gatewayType, `Request timeout after ${timeoutMs}ms`);
     this.name = 'ChaosTimeoutError';
   }
 }
@@ -225,10 +227,10 @@ export class ChaosGateway implements PaymentGateway {
     startTime: number;
     failureCount: number;
   } = {
-      active: false,
-      startTime: 0,
-      failureCount: 0,
-    };
+    active: false,
+    startTime: 0,
+    failureCount: 0,
+  };
 
   constructor(
     private realGateway: PaymentGateway,
@@ -262,12 +264,14 @@ export class ChaosGateway implements PaymentGateway {
     }
     if (this.shouldInjectTimeout()) {
       this.injectionCount++;
-      return fail(new GatewayError(
-        GatewayErrorCode.TIMEOUT,
-        `Chaos timeout after ${this.config.timeoutMs}ms`,
-        this.name,
-        true
-      ));
+      return fail(
+        new GatewayError(
+          GatewayErrorCode.TIMEOUT,
+          `Chaos timeout after ${this.config.timeoutMs}ms`,
+          this.name,
+          true
+        )
+      );
     }
     return this.realGateway.process(payment);
   }
@@ -276,7 +280,10 @@ export class ChaosGateway implements PaymentGateway {
     return this.processPayment(payment);
   }
 
-  async refund(payment: Payment, amount?: number): Promise<Result<GatewayRefundResponse, GatewayError>> {
+  async refund(
+    payment: Payment,
+    amount?: number
+  ): Promise<Result<GatewayRefundResponse, GatewayError>> {
     if (!this.config.enabled) {
       return this.realGateway.refund(payment, amount);
     }
@@ -352,10 +359,7 @@ export class ChaosGateway implements PaymentGateway {
    */
   private async maybeInjectLatency(): Promise<void> {
     if (this.random.next() < this.config.latencyRate) {
-      const latency = this.random.nextInt(
-        this.config.latencyMs.min,
-        this.config.latencyMs.max
-      );
+      const latency = this.random.nextInt(this.config.latencyMs.min, this.config.latencyMs.max);
 
       console.log(`[CHAOS] Injecting ${latency}ms latency on ${this.type}`);
 
@@ -428,13 +432,13 @@ export class ChaosGateway implements PaymentGateway {
 export interface ChaosExperiment {
   name: string;
   description: string;
-  duration: number;                 // Duration in ms
+  duration: number; // Duration in ms
   config: ChaosConfig;
 
   // Success criteria
-  expectedSuccessRate: number;      // Min success rate to pass (0-1)
-  maxCircuitBreakerOpens: number;   // Max allowed circuit breaker opens
-  maxAverageLatency: number;        // Max average latency (ms)
+  expectedSuccessRate: number; // Min success rate to pass (0-1)
+  maxCircuitBreakerOpens: number; // Max allowed circuit breaker opens
+  maxAverageLatency: number; // Max average latency (ms)
 
   // Validation
   validateInvariants: () => Promise<boolean>;
@@ -471,7 +475,7 @@ export interface ExperimentResult {
  * Chaos Orchestrator
  */
 export class ChaosOrchestrator {
-  constructor() { }
+  constructor() {}
 
   /**
    * Run chaos experiment
@@ -509,10 +513,7 @@ export class ChaosOrchestrator {
         metrics.failedRequests++;
 
         const errorType = (error as Error).name;
-        metrics.errorCounts.set(
-          errorType,
-          (metrics.errorCounts.get(errorType) || 0) + 1
-        );
+        metrics.errorCounts.set(errorType, (metrics.errorCounts.get(errorType) || 0) + 1);
 
         if (errorType === 'CircuitBreakerOpenError') {
           metrics.circuitBreakerOpens++;
@@ -531,8 +532,7 @@ export class ChaosOrchestrator {
 
     // Calculate metrics
     const successRate = metrics.successfulRequests / metrics.totalRequests;
-    const averageLatency =
-      metrics.latencies.reduce((a, b) => a + b, 0) / metrics.latencies.length;
+    const averageLatency = metrics.latencies.reduce((a, b) => a + b, 0) / metrics.latencies.length;
 
     const sortedLatencies = metrics.latencies.sort((a, b) => a - b);
     const p95Index = Math.floor(sortedLatencies.length * 0.95);
@@ -580,14 +580,14 @@ export class ChaosOrchestrator {
     console.log(`\n${'='.repeat(60)}`);
     console.log(`📊 EXPERIMENT RESULTS`);
     console.log(`${'='.repeat(60)}`);
-    console.log(
-      `${result.success ? '✅ PASSED' : '❌ FAILED'}: ${result.experiment.name}`
-    );
+    console.log(`${result.success ? '✅ PASSED' : '❌ FAILED'}: ${result.experiment.name}`);
     console.log();
 
     console.log('📈 Metrics:');
     console.log(`  Total Requests: ${result.totalRequests}`);
-    console.log(`  Successful: ${result.successfulRequests} (${(result.successRate * 100).toFixed(2)}%)`);
+    console.log(
+      `  Successful: ${result.successfulRequests} (${(result.successRate * 100).toFixed(2)}%)`
+    );
     console.log(`  Failed: ${result.failedRequests}`);
     console.log(`  Circuit Breaker Opens: ${result.circuitBreakerOpens}`);
     console.log();
@@ -610,9 +610,15 @@ export class ChaosOrchestrator {
 
     console.log('🔍 Validation:');
     console.log(`  Invariants Held: ${result.invariantsHeld ? '✅' : '❌'}`);
-    console.log(`  Success Rate: ${result.successRate >= result.experiment.expectedSuccessRate ? '✅' : '❌'} (expected: ${result.experiment.expectedSuccessRate * 100}%, actual: ${result.successRate * 100}%)`);
-    console.log(`  CB Opens: ${result.circuitBreakerOpens <= result.experiment.maxCircuitBreakerOpens ? '✅' : '❌'} (max: ${result.experiment.maxCircuitBreakerOpens}, actual: ${result.circuitBreakerOpens})`);
-    console.log(`  Latency: ${result.averageLatency <= result.experiment.maxAverageLatency ? '✅' : '❌'} (max: ${result.experiment.maxAverageLatency}ms, actual: ${result.averageLatency.toFixed(2)}ms)`);
+    console.log(
+      `  Success Rate: ${result.successRate >= result.experiment.expectedSuccessRate ? '✅' : '❌'} (expected: ${result.experiment.expectedSuccessRate * 100}%, actual: ${result.successRate * 100}%)`
+    );
+    console.log(
+      `  CB Opens: ${result.circuitBreakerOpens <= result.experiment.maxCircuitBreakerOpens ? '✅' : '❌'} (max: ${result.experiment.maxCircuitBreakerOpens}, actual: ${result.circuitBreakerOpens})`
+    );
+    console.log(
+      `  Latency: ${result.averageLatency <= result.experiment.maxAverageLatency ? '✅' : '❌'} (max: ${result.experiment.maxAverageLatency}ms, actual: ${result.averageLatency.toFixed(2)}ms)`
+    );
 
     console.log(`\n${'='.repeat(60)}\n`);
   }
@@ -630,12 +636,13 @@ export class ChaosAssertions {
    * Assert no double processing occurred
    */
   static assertNoDuplicates(payments: Payment[], message?: string): void {
-    const ids = payments.map(p => p.id);
+    const ids = payments.map((p) => p.id);
     const uniqueIds = new Set(ids);
 
     if (ids.length !== uniqueIds.size) {
       throw new Error(
-        message || `Duplicate payment detected! ${ids.length} payments, ${uniqueIds.size} unique IDs`
+        message ||
+          `Duplicate payment detected! ${ids.length} payments, ${uniqueIds.size} unique IDs`
       );
     }
 
@@ -668,7 +675,7 @@ export class ChaosAssertions {
     message?: string
   ): void {
     const totalDebits = payments
-      .filter(p => p.state === PaymentState.SUCCESS)
+      .filter((p) => p.state === PaymentState.SUCCESS)
       .reduce((sum, p) => sum + p.amount.amount, 0);
 
     const expectedBalance = initialBalance - totalDebits;
@@ -677,7 +684,7 @@ export class ChaosAssertions {
     if (Math.abs(finalBalance - expectedBalance) > tolerance) {
       throw new Error(
         message ||
-        `Money conservation violated! Expected: ${expectedBalance}, Actual: ${finalBalance}, Diff: ${Math.abs(finalBalance - expectedBalance)}`
+          `Money conservation violated! Expected: ${expectedBalance}, Actual: ${finalBalance}, Diff: ${Math.abs(finalBalance - expectedBalance)}`
       );
     }
 
@@ -695,15 +702,12 @@ export class ChaosAssertions {
 
     // Check for orphaned records (initiated but never completed or failed)
     const orphaned = payments.filter(
-      p =>
-        p.state === PaymentState.INITIATED &&
-        Date.now() - p.createdAt.getTime() > 300000 // 5 minutes
+      (p) => p.state === PaymentState.INITIATED && Date.now() - p.createdAt.getTime() > 300000 // 5 minutes
     );
 
     if (orphaned.length > 0) {
       throw new Error(
-        message ||
-        `Database consistency violated! ${orphaned.length} orphaned payments found`
+        message || `Database consistency violated! ${orphaned.length} orphaned payments found`
       );
     }
 
@@ -720,12 +724,10 @@ export class ChaosAssertions {
   ): void {
     // Every payment should have at least one event
     for (const payment of payments) {
-      const paymentEvents = events.filter(e => e.paymentId === payment.id);
+      const paymentEvents = events.filter((e) => e.paymentId === payment.id);
 
       if (paymentEvents.length === 0) {
-        throw new Error(
-          message || `Audit trail incomplete! Payment ${payment.id} has no events`
-        );
+        throw new Error(message || `Audit trail incomplete! Payment ${payment.id} has no events`);
       }
     }
 
@@ -744,7 +746,7 @@ export class ChaosAssertions {
     if (after.processingCount > before.processingCount) {
       throw new Error(
         message ||
-        `Recovery failed! Processing count increased: ${before.processingCount} → ${after.processingCount}`
+          `Recovery failed! Processing count increased: ${before.processingCount} → ${after.processingCount}`
       );
     }
 
@@ -762,12 +764,10 @@ export class ChaosAssertions {
   ): void {
     // Every payment should have logs
     for (const payment of payments) {
-      const paymentLogs = logs.filter(l => l.paymentId === payment.id);
+      const paymentLogs = logs.filter((l) => l.paymentId === payment.id);
 
       if (paymentLogs.length === 0) {
-        throw new Error(
-          message || `Observability gap! Payment ${payment.id} has no logs`
-        );
+        throw new Error(message || `Observability gap! Payment ${payment.id} has no logs`);
       }
     }
 

@@ -1,13 +1,13 @@
 /**
  * Production Failure Scenario Handlers
- * 
+ *
  * This module simulates and handles various production failure scenarios:
  * - Gateway timeouts
  * - Partial failures
  * - Network errors
  * - Process crashes
  * - Database failures
- * 
+ *
  * Ensures the system recovers correctly without double processing.
  */
 
@@ -21,7 +21,7 @@ import {
   GatewayRefundResponse,
   GatewayStatusResponse,
   GatewayError,
-  GatewayErrorCode
+  GatewayErrorCode,
 } from '../gateways/gateway';
 
 /**
@@ -57,7 +57,7 @@ export class ResilientGatewayWrapper implements PaymentGateway {
   constructor(
     private gateway: PaymentGateway,
     private failureConfig: FailureConfig = DEFAULT_FAILURE_CONFIG
-  ) { }
+  ) {}
 
   get name(): string {
     return this.gateway.name;
@@ -67,7 +67,10 @@ export class ResilientGatewayWrapper implements PaymentGateway {
     return this.gateway.type;
   }
 
-  async refund(payment: Payment, amount?: number): Promise<Result<GatewayRefundResponse, GatewayError>> {
+  async refund(
+    payment: Payment,
+    amount?: number
+  ): Promise<Result<GatewayRefundResponse, GatewayError>> {
     try {
       return await this.gateway.refund(payment, amount);
     } catch (error) {
@@ -75,7 +78,9 @@ export class ResilientGatewayWrapper implements PaymentGateway {
     }
   }
 
-  async getStatus(gatewayTransactionId: string): Promise<Result<GatewayStatusResponse, GatewayError>> {
+  async getStatus(
+    gatewayTransactionId: string
+  ): Promise<Result<GatewayStatusResponse, GatewayError>> {
     try {
       return await this.gateway.getStatus(gatewayTransactionId);
     } catch (error) {
@@ -199,8 +204,7 @@ export class ResilientGatewayWrapper implements PaymentGateway {
 
   private shouldSimulateNetworkError(): boolean {
     return (
-      this.failureConfig.simulateNetworkError &&
-      Math.random() < this.failureConfig.networkErrorRate
+      this.failureConfig.simulateNetworkError && Math.random() < this.failureConfig.networkErrorRate
     );
   }
 
@@ -212,51 +216,75 @@ export class ResilientGatewayWrapper implements PaymentGateway {
   }
 
   private shouldSimulateCrash(): boolean {
-    return (
-      this.failureConfig.simulateCrash && Math.random() < this.failureConfig.crashRate
-    );
+    return this.failureConfig.simulateCrash && Math.random() < this.failureConfig.crashRate;
   }
 
   private async simulateTimeout(): Promise<void> {
-    await new Promise((resolve) =>
-      setTimeout(resolve, this.failureConfig.timeoutDelayMs)
-    );
-    throw new TimeoutError(
-      `Operation timed out after ${this.failureConfig.timeoutDelayMs}ms`
-    );
+    await new Promise((resolve) => setTimeout(resolve, this.failureConfig.timeoutDelayMs));
+    throw new TimeoutError(`Operation timed out after ${this.failureConfig.timeoutDelayMs}ms`);
   }
 
   private handleFailure(error: Error, operation: string): Result<never, GatewayError> {
     // Classify the error and decide if it's retryable
     if (error instanceof TimeoutError) {
       return fail(
-        new GatewayError(GatewayErrorCode.TIMEOUT, `Timeout during ${operation}`, 'resilient-wrapper', true, error)
+        new GatewayError(
+          GatewayErrorCode.TIMEOUT,
+          `Timeout during ${operation}`,
+          'resilient-wrapper',
+          true,
+          error
+        )
       );
     }
 
     if (error instanceof NetworkError) {
       return fail(
-        new GatewayError(GatewayErrorCode.NETWORK_ERROR, `Network error during ${operation}`, 'resilient-wrapper', true, error)
+        new GatewayError(
+          GatewayErrorCode.NETWORK_ERROR,
+          `Network error during ${operation}`,
+          'resilient-wrapper',
+          true,
+          error
+        )
       );
     }
 
     if (error instanceof PartialFailureError) {
       // Partial failure: we need to verify the state on the gateway
       return fail(
-        new GatewayError(GatewayErrorCode.GATEWAY_ERROR, `Partial failure during ${operation}: ${error.message}`, 'resilient-wrapper', false, error)
+        new GatewayError(
+          GatewayErrorCode.GATEWAY_ERROR,
+          `Partial failure during ${operation}: ${error.message}`,
+          'resilient-wrapper',
+          false,
+          error
+        )
       );
     }
 
     if (error instanceof ProcessCrashError) {
       // Process crash: state needs to be recovered from events
       return fail(
-        new GatewayError(GatewayErrorCode.GATEWAY_ERROR, `Process crash during ${operation}`, 'resilient-wrapper', false, error)
+        new GatewayError(
+          GatewayErrorCode.GATEWAY_ERROR,
+          `Process crash during ${operation}`,
+          'resilient-wrapper',
+          false,
+          error
+        )
       );
     }
 
     // Unknown error: assume not retryable
     return fail(
-      new GatewayError(GatewayErrorCode.UNKNOWN_ERROR, `Unknown error during ${operation}`, 'resilient-wrapper', false, error)
+      new GatewayError(
+        GatewayErrorCode.UNKNOWN_ERROR,
+        `Unknown error during ${operation}`,
+        'resilient-wrapper',
+        false,
+        error
+      )
     );
   }
 }
@@ -283,7 +311,10 @@ export class NetworkError extends Error {
 export class PartialFailureError extends Error {
   constructor(
     message: string,
-    public readonly partialResponse?: GatewayInitiateResponse | GatewayProcessResponse | GatewayAuthResponse
+    public readonly partialResponse?:
+      | GatewayInitiateResponse
+      | GatewayProcessResponse
+      | GatewayAuthResponse
   ) {
     super(message);
     this.name = 'PartialFailureError';
@@ -301,16 +332,16 @@ export class ProcessCrashError extends Error {
 
 /**
  * Recovery strategy for handling partial failures
- * 
+ *
  * When a partial failure occurs (operation succeeded but response lost),
  * we need to verify the state on the gateway to avoid double processing.
  */
 export class PartialFailureRecovery {
-  constructor(private gateway: PaymentGateway) { }
+  constructor(private gateway: PaymentGateway) {}
 
   /**
    * Verify payment state on gateway after partial failure
-   * 
+   *
    * Uses the gateway transaction ID to check if the operation succeeded.
    * This is idempotent and safe to call multiple times.
    */
@@ -355,7 +386,7 @@ export class PartialFailureRecovery {
 
   /**
    * Reconcile payment state with gateway
-   * 
+   *
    * Called during crash recovery to ensure state consistency.
    */
   async reconcilePayment(payment: Payment): Promise<Payment> {
@@ -389,7 +420,7 @@ export interface VerificationResult {
 
 /**
  * Crash recovery coordinator
- * 
+ *
  * Handles recovery after process crashes by:
  * 1. Rebuilding state from events
  * 2. Verifying state with gateway
@@ -403,11 +434,11 @@ export class CrashRecoveryCoordinator {
       error: (msg: string, err: Error, ctx?: Record<string, unknown>) => void;
       warn: (msg: string, ctx?: Record<string, unknown>) => void;
     }
-  ) { }
+  ) {}
 
   /**
    * Recover payment after crash
-   * 
+   *
    * This is idempotent and safe to call multiple times.
    */
   async recoverPayment(payment: Payment): Promise<Payment> {
@@ -432,9 +463,7 @@ export class CrashRecoveryCoordinator {
         gatewayTxnId: payment.gatewayTransactionId,
       });
 
-      const reconciledPayment = await this.partialFailureRecovery.reconcilePayment(
-        payment
-      );
+      const reconciledPayment = await this.partialFailureRecovery.reconcilePayment(payment);
 
       this.logger.info('Payment state reconciled', {
         paymentId: payment.id,

@@ -60,9 +60,7 @@ export class InMemoryPaymentRepository implements PaymentRepository {
     // Check for duplicate idempotency key
     const existingPayment = await this.findByIdempotencyKey(payment.idempotencyKey);
     if (existingPayment) {
-      throw new Error(
-        `Payment with idempotency key ${payment.idempotencyKey} already exists`
-      );
+      throw new Error(`Payment with idempotency key ${payment.idempotencyKey} already exists`);
     }
 
     this.payments.set(payment.id, payment);

@@ -23,7 +23,7 @@ export const DEFAULT_RETRY_CONFIG: RetryConfig = {
  * Retry Policy Implementation
  */
 export class RetryPolicy {
-  constructor(private config: RetryConfig = DEFAULT_RETRY_CONFIG) { }
+  constructor(private config: RetryConfig = DEFAULT_RETRY_CONFIG) {}
 
   /**
    * Calculate delay for next retry attempt
@@ -62,10 +62,7 @@ export class RetryPolicy {
       } catch (error) {
         lastError = error as Error;
 
-        const shouldRetry = this.shouldRetry(
-          attempt,
-          isRetryableError(error as Error)
-        );
+        const shouldRetry = this.shouldRetry(attempt, isRetryableError(error as Error));
 
         if (!shouldRetry) {
           throw error;

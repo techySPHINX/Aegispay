@@ -1,31 +1,31 @@
 /**
  * INTELLIGENT GATEWAY ROUTING ENGINE
- * 
+ *
  * This module implements an adaptive routing system that selects optimal payment
  * gateways based on real-time metrics:
  * - Success rate (higher is better)
  * - Latency (lower is better)
  * - Cost (lower is better)
  * - Availability (circuit breaker state)
- * 
+ *
  * ROUTING STRATEGIES:
  * 1. Deterministic: Static rules, predictable behavior
  * 2. Adaptive: Learns from metrics, optimizes over time
  * 3. Hybrid: Combines both approaches
- * 
+ *
  * TRADE-OFFS:
  * Deterministic:
  *   ✅ Predictable, testable
  *   ✅ Simple to understand and debug
  *   ❌ Cannot adapt to changing conditions
  *   ❌ Manual updates required
- * 
+ *
  * Adaptive:
  *   ✅ Self-optimizing, learns from data
  *   ✅ Handles changing conditions
  *   ❌ Less predictable
  *   ❌ Requires sufficient data
- * 
+ *
  * Hybrid:
  *   ✅ Best of both worlds
  *   ✅ Safe defaults with adaptive optimization
@@ -49,21 +49,21 @@ export interface GatewayMetrics {
   totalRequests: number;
   successfulRequests: number;
   failedRequests: number;
-  successRate: number;           // 0.0 to 1.0
+  successRate: number; // 0.0 to 1.0
 
   // Latency tracking
-  totalLatency: number;          // Sum of all latencies
-  avgLatency: number;            // Average latency in ms
-  p95Latency: number;            // 95th percentile latency
-  p99Latency: number;            // 99th percentile latency
+  totalLatency: number; // Sum of all latencies
+  avgLatency: number; // Average latency in ms
+  p95Latency: number; // 95th percentile latency
+  p99Latency: number; // 99th percentile latency
 
   // Cost tracking
-  totalCost: number;             // Total processing cost
-  avgCost: number;               // Average cost per transaction
+  totalCost: number; // Total processing cost
+  avgCost: number; // Average cost per transaction
 
   // Health status
-  isAvailable: boolean;          // Circuit breaker state
-  consecutiveFailures: number;   // For health tracking
+  isAvailable: boolean; // Circuit breaker state
+  consecutiveFailures: number; // For health tracking
   lastFailureTime: Date | null;
 
   // Time window
@@ -94,16 +94,12 @@ export class GatewayMetricsCollector {
   private readonly snapshotInterval = 60000; // 1 minute
   private snapshotTimer: NodeJS.Timeout | null = null;
 
-  constructor(private windowSize: number = 3600000) { } // 1 hour default
+  constructor(private windowSize: number = 3600000) {} // 1 hour default
 
   /**
    * Record a successful payment
    */
-  recordSuccess(
-    gatewayType: GatewayType,
-    latency: number,
-    cost: number
-  ): void {
+  recordSuccess(gatewayType: GatewayType, latency: number, cost: number): void {
     const metrics = this.getOrCreateMetrics(gatewayType);
 
     metrics.totalRequests++;
@@ -349,7 +345,7 @@ export class GatewayMetricsCollector {
 export interface RoutingRule {
   name: string;
   description: string;
-  priority: number;                    // Higher priority rules evaluated first
+  priority: number; // Higher priority rules evaluated first
   condition: (context: RoutingContext) => boolean;
   action: (context: RoutingContext) => GatewayType | null;
 }
@@ -382,20 +378,20 @@ export interface RoutingDecision {
  * Weighted scoring configuration
  */
 export interface ScoringWeights {
-  successRate: number;      // Weight for success rate (0-1)
-  latency: number;          // Weight for latency (0-1)
-  cost: number;             // Weight for cost (0-1)
+  successRate: number; // Weight for success rate (0-1)
+  latency: number; // Weight for latency (0-1)
+  cost: number; // Weight for cost (0-1)
 }
 
 export const DEFAULT_WEIGHTS: ScoringWeights = {
-  successRate: 0.5,         // 50% weight on success rate
-  latency: 0.3,             // 30% weight on latency
-  cost: 0.2,                // 20% weight on cost
+  successRate: 0.5, // 50% weight on success rate
+  latency: 0.3, // 30% weight on latency
+  cost: 0.2, // 20% weight on cost
 };
 
 /**
  * Intelligent Routing Engine
- * 
+ *
  * Selects optimal gateway using:
  * 1. Real-time metrics
  * 2. Weighted scoring
@@ -406,9 +402,7 @@ export class IntelligentRoutingEngine {
   private rules: RoutingRule[] = [];
   private weights: ScoringWeights;
 
-  constructor(
-    weights: ScoringWeights = DEFAULT_WEIGHTS
-  ) {
+  constructor(weights: ScoringWeights = DEFAULT_WEIGHTS) {
     this.weights = weights;
   }
 
@@ -434,9 +428,7 @@ export class IntelligentRoutingEngine {
   /**
    * Apply rules in priority order
    */
-  private applyRules(
-    context: RoutingContext
-  ): { gateway: GatewayType; reason: string } | null {
+  private applyRules(context: RoutingContext): { gateway: GatewayType; reason: string } | null {
     const sortedRules = [...this.rules].sort((a, b) => b.priority - a.priority);
 
     for (const rule of sortedRules) {
@@ -644,9 +636,7 @@ export function createLowLatencyRule(paymentMethodTypes: string[]): RoutingRule 
 /**
  * Cost optimization rule: Route to cheapest gateway
  */
-export function createCostOptimizationRule(
-  minSuccessRate: number = 0.95
-): RoutingRule {
+export function createCostOptimizationRule(minSuccessRate: number = 0.95): RoutingRule {
   return {
     name: 'cost-optimization',
     description: 'Route to cheapest gateway with acceptable success rate',

@@ -11,7 +11,7 @@ import { PaymentStateMachine } from './paymentStateMachine';
 /**
  * Payment aggregate root - represents the core payment entity
  * This is an immutable domain model following DDD principles
- * 
+ *
  * All state transitions are validated through the formal state machine
  */
 export class Payment {

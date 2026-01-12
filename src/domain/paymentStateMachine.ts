@@ -2,22 +2,22 @@ import { PaymentState } from './types';
 
 /**
  * FORMAL PAYMENT STATE MACHINE WITH INVARIANTS
- * 
+ *
  * This module implements a deterministic finite state machine (DFA) for payment lifecycle
  * with strong guarantees:
- * 
+ *
  * 1. DETERMINISM: Each state has exactly one possible transition per event type
  * 2. COMPLETENESS: All states and transitions are explicitly defined
  * 3. INVARIANTS: Terminal states have no outgoing transitions (mathematically proven)
  * 4. TYPE SAFETY: Invalid transitions are rejected at compile-time where possible
  * 5. CONCURRENCY SAFETY: State machine enforces linearizability under concurrent operations
- * 
+ *
  * State Machine Definition:
  * - States: S = {INITIATED, AUTHENTICATED, PROCESSING, SUCCESS, FAILURE}
  * - Initial State: s₀ = INITIATED
  * - Terminal States: F = {SUCCESS, FAILURE}
  * - Transition Function: δ: S × Event → S
- * 
+ *
  * Invariants:
  * - ∀s ∈ F: δ(s, e) = undefined (terminal states have no outgoing transitions)
  * - ∀s ∉ F: ∃e: δ(s, e) is defined (non-terminal states must have valid transitions)
@@ -45,7 +45,7 @@ export type ValidTransitions = {
  */
 export type IsValidTransition<
   From extends PaymentState,
-  To extends PaymentState
+  To extends PaymentState,
 > = To extends ValidTransitions[From] ? true : false;
 
 // ============================================================================
@@ -154,7 +154,10 @@ export class InvariantViolationError extends Error {
  * Terminal state invariant: Once in terminal state, no transitions are allowed
  * This is a mathematical invariant of the state machine
  */
-export function enforceTerminalStateInvariant(state: PaymentState, attemptedTransition: PaymentState): void {
+export function enforceTerminalStateInvariant(
+  state: PaymentState,
+  attemptedTransition: PaymentState
+): void {
   if (isTerminalState(state)) {
     throw new InvariantViolationError(
       state,
@@ -167,7 +170,9 @@ export function enforceTerminalStateInvariant(state: PaymentState, attemptedTran
 /**
  * Check if a state is terminal
  */
-export function isTerminalState(state: PaymentState): state is PaymentState.SUCCESS | PaymentState.FAILURE {
+export function isTerminalState(
+  state: PaymentState
+): state is PaymentState.SUCCESS | PaymentState.FAILURE {
   return state === PaymentState.SUCCESS || state === PaymentState.FAILURE;
 }
 
@@ -196,10 +201,10 @@ export function getStateInvariants(state: PaymentState): readonly string[] {
 export class PaymentStateMachine {
   /**
    * CORE TRANSITION VALIDATOR
-   * 
+   *
    * This is the δ (delta) function of our DFA
    * δ: S × Event → S ∪ {error}
-   * 
+   *
    * Guarantees:
    * 1. Deterministic: Same input always produces same output
    * 2. Total: Defined for all state pairs (returns false for invalid)
@@ -234,10 +239,10 @@ export class PaymentStateMachine {
    * Type-safe transition validator
    * Returns true if transition is valid, throws otherwise
    */
-  static validateTransitionTyped<
-    From extends PaymentState,
-    To extends PaymentState
-  >(from: From, to: To): boolean {
+  static validateTransitionTyped<From extends PaymentState, To extends PaymentState>(
+    from: From,
+    to: To
+  ): boolean {
     this.validateTransition(from, to);
     return true;
   }
@@ -245,7 +250,7 @@ export class PaymentStateMachine {
   /**
    * Pre-transition validator - checks if transition CAN be attempted
    * Use this before attempting a transition to fail early
-   * 
+   *
    * This is critical for concurrency: By checking validity BEFORE attempting
    * the transition, we avoid race conditions where multiple processes try
    * to transition from the same state simultaneously
@@ -398,11 +403,10 @@ export class InvalidStateTransitionError extends Error {
     public readonly to: PaymentState
   ) {
     const validStates = PaymentStateMachine.getValidNextStates(from);
-    const validStatesStr = validStates.length > 0 ? validStates.join(', ') : 'none (terminal state)';
+    const validStatesStr =
+      validStates.length > 0 ? validStates.join(', ') : 'none (terminal state)';
 
-    super(
-      `Invalid state transition: ${from} -> ${to}. Valid next states: ${validStatesStr}`
-    );
+    super(`Invalid state transition: ${from} -> ${to}. Valid next states: ${validStatesStr}`);
     this.name = 'InvalidStateTransitionError';
     Object.setPrototypeOf(this, InvalidStateTransitionError.prototype);
   }
@@ -426,13 +430,13 @@ export interface ConcurrencyToken {
 /**
  * Compare-and-Swap transition
  * This is the key to concurrency safety: only transition if current state matches expected state
- * 
+ *
  * Under concurrent execution:
  * - Process A reads state=INITIATED, attempts transition to AUTHENTICATED
  * - Process B reads state=INITIATED, attempts transition to AUTHENTICATED
  * - Only ONE will succeed (whichever updates first)
  * - The other will fail with ConcurrentModificationError
- * 
+ *
  * This implements linearizability - all operations appear to occur atomically
  */
 export function compareAndSwapTransition(
@@ -462,8 +466,8 @@ export class ConcurrentModificationError extends Error {
   ) {
     super(
       `Concurrent modification detected: Expected state ${expectedState}, ` +
-      `but found ${actualState}. Cannot transition to ${attemptedNewState}. ` +
-      `This indicates another process modified the payment state.`
+        `but found ${actualState}. Cannot transition to ${attemptedNewState}. ` +
+        `This indicates another process modified the payment state.`
     );
     this.name = 'ConcurrentModificationError';
     Object.setPrototypeOf(this, ConcurrentModificationError.prototype);

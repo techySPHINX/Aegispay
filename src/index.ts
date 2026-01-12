@@ -183,7 +183,7 @@ export {
   DEFAULT_WEIGHTS,
   createHighValueRule,
   createLowLatencyRule,
-  createCostOptimizationRule
+  createCostOptimizationRule,
 } from './orchestration/intelligentRouting';
 export * from './orchestration/chaosEngineering';
 export {
@@ -191,7 +191,7 @@ export {
   HookExecutor,
   HighValueFraudCheck,
   GeographicFraudCheck,
-  PaymentLoggingListener
+  PaymentLoggingListener,
 } from './orchestration/hooks';
 export * from './infra/optimisticLocking';
 export * from './infra/idempotency';

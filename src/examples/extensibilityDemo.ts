@@ -1,8 +1,8 @@
 /**
  * SDK EXTENSIBILITY DEMO
- * 
+ *
  * Demonstrates how extensibility hooks enable low-code/no-code usage.
- * 
+ *
  * KEY CONCEPTS:
  * =============
  * 1. Core Logic Untouched - Payment processing stays simple
@@ -10,7 +10,7 @@
  * 3. Plugin Architecture - Mix and match extensions
  * 4. Graceful Degradation - Hooks fail without breaking payments
  * 5. Framework Thinking - Inversion of control
- * 
+ *
  * USE CASES:
  * ==========
  * 1. Custom Fraud Detection
@@ -18,7 +18,7 @@
  * 3. Business Rule Validation
  * 4. Event-Driven Integration
  * 5. Custom Metrics & Logging
- * 
+ *
  * HOW THIS ENABLES LOW-CODE/NO-CODE:
  * ===================================
  * Users can configure hooks via JSON instead of writing TypeScript.
@@ -48,9 +48,12 @@ class VIPCustomerFraudCheck implements FraudCheckHook {
   priority = 100;
   enabled = true;
 
-  async execute(context: HookContext): Promise<
-    | { allowed: boolean; riskScore: number; reason?: string; metadata?: Record<string, unknown> }
-  > {
+  async execute(context: HookContext): Promise<{
+    allowed: boolean;
+    riskScore: number;
+    reason?: string;
+    metadata?: Record<string, unknown>;
+  }> {
     const isVIP = context.metadata.customerType === 'VIP';
 
     if (isVIP) {
@@ -75,7 +78,12 @@ class CostOptimizedRouting implements RoutingStrategyHook {
   priority = 90;
   enabled = true;
 
-  async execute(context: HookContext): Promise<{ gatewayType: GatewayType; confidence: number; reason: string; metadata?: Record<string, unknown> }> {
+  async execute(context: HookContext): Promise<{
+    gatewayType: GatewayType;
+    confidence: number;
+    reason: string;
+    metadata?: Record<string, unknown>;
+  }> {
     const amount = context.payment.amount.amount;
 
     // Route small payments to cheaper gateway
@@ -84,7 +92,7 @@ class CostOptimizedRouting implements RoutingStrategyHook {
         gatewayType: GatewayType.MOCK,
         confidence: 0.9,
         reason: 'Small payment - using cheaper gateway',
-        metadata: { costSaving: 0.10 },
+        metadata: { costSaving: 0.1 },
       };
     }
 
@@ -158,7 +166,16 @@ async function demoCodeBasedHooks(): Promise<void> {
     idempotencyKey: 'idem_001',
     state: PaymentState.INITIATED,
     amount: new Money(2500, Currency.USD),
-    paymentMethod: { type: PaymentMethodType.CARD, details: { cardNumber: '****', expiryMonth: '12', expiryYear: '25', cvv: '***', cardHolderName: 'VIP Customer' } },
+    paymentMethod: {
+      type: PaymentMethodType.CARD,
+      details: {
+        cardNumber: '****',
+        expiryMonth: '12',
+        expiryYear: '25',
+        cvv: '***',
+        cardHolderName: 'VIP Customer',
+      },
+    },
     customer: { id: 'cust_vip', email: 'vip@example.com' },
     gatewayType: GatewayType.STRIPE,
   });
@@ -250,7 +267,7 @@ async function demoNoCodeHooks(): Promise<void> {
       {
         condition: 'country = UK',
         gateway: GatewayType.PAYPAL,
-        confidence: 0.90,
+        confidence: 0.9,
         reason: 'UK customers prefer PayPal',
       },
     ],
@@ -288,7 +305,16 @@ async function demoNoCodeHooks(): Promise<void> {
     idempotencyKey: 'idem_002',
     state: PaymentState.INITIATED,
     amount: new Money(15000, Currency.USD),
-    paymentMethod: { type: PaymentMethodType.CARD, details: { cardNumber: '****', expiryMonth: '12', expiryYear: '25', cvv: '***', cardHolderName: 'Customer 2' } },
+    paymentMethod: {
+      type: PaymentMethodType.CARD,
+      details: {
+        cardNumber: '****',
+        expiryMonth: '12',
+        expiryYear: '25',
+        cvv: '***',
+        cardHolderName: 'Customer 2',
+      },
+    },
     customer: { id: 'cust_002', email: 'cust002@example.com' },
     gatewayType: GatewayType.STRIPE,
   });
@@ -311,7 +337,16 @@ async function demoNoCodeHooks(): Promise<void> {
     idempotencyKey: 'idem_003',
     state: PaymentState.INITIATED,
     amount: new Money(100, Currency.USD),
-    paymentMethod: { type: PaymentMethodType.CARD, details: { cardNumber: '****', expiryMonth: '12', expiryYear: '25', cvv: '***', cardHolderName: 'Customer 3' } },
+    paymentMethod: {
+      type: PaymentMethodType.CARD,
+      details: {
+        cardNumber: '****',
+        expiryMonth: '12',
+        expiryYear: '25',
+        cvv: '***',
+        cardHolderName: 'Customer 3',
+      },
+    },
     customer: { id: 'cust_003', email: 'cust003@example.com' },
     gatewayType: GatewayType.STRIPE,
   });
@@ -495,9 +530,4 @@ NEXT STEPS:
   })();
 }
 
-export {
-  demoCodeBasedHooks,
-  demoNoCodeHooks,
-  demoMarketplaceHooks,
-  demonstrateCoreIntegrity,
-};
+export { demoCodeBasedHooks, demoNoCodeHooks, demoMarketplaceHooks, demonstrateCoreIntegrity };

@@ -1,8 +1,8 @@
 /**
  * OBSERVABILITY DEMO
- * 
+ *
  * Demonstrates how observability helps debug payment failures in production.
- * 
+ *
  * FEATURES DEMONSTRATED:
  * =======================
  * 1. Correlation IDs - Track payments across services
@@ -10,16 +10,16 @@
  * 3. Metrics Collection - Identify patterns and anomalies
  * 4. Trace Propagation - Understand performance bottlenecks
  * 5. Timer Utilities - Automatic duration tracking
- * 
+ *
  * PRODUCTION DEBUGGING SCENARIOS:
  * ===============================
  * Scenario 1: Customer reports failed payment
  * → Search logs by paymentId to reconstruct full flow
- * 
+ *
  * Scenario 2: Gateway latency spike
  * → Check metrics to identify slow gateway
  * → Use traces to find bottleneck
- * 
+ *
  * Scenario 3: Intermittent failures
  * → Analyze retry metrics
  * → Check error rates by gateway type
@@ -43,7 +43,7 @@ async function processPaymentWithObservability(): Promise<void> {
   });
 
   ctx1.logger.info('Payment processing started', {
-    amount: 100.00,
+    amount: 100.0,
     currency: 'USD',
   });
 
@@ -75,7 +75,7 @@ async function processPaymentWithObservability(): Promise<void> {
   });
 
   ctx2.logger.info('Payment processing started', {
-    amount: 250.00,
+    amount: 250.0,
     currency: 'EUR',
   });
 
@@ -109,7 +109,7 @@ async function processPaymentWithObservability(): Promise<void> {
   });
 
   ctx3.logger.info('Payment processing started', {
-    amount: 500.00,
+    amount: 500.0,
     currency: 'GBP',
   });
 
@@ -178,7 +178,7 @@ PRODUCTION BENEFITS:
  * Simulate gateway call with latency
  */
 function simulateGatewayCall(latencyMs: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, latencyMs));
+  return new Promise((resolve) => setTimeout(resolve, latencyMs));
 }
 
 /**

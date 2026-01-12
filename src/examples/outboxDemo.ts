@@ -1,8 +1,8 @@
 /**
  * Transactional Outbox Pattern Demo
- * 
+ *
  * This demo showcases the transactional outbox pattern and exactly-once semantics.
- * 
+ *
  * WHAT YOU'LL SEE:
  * 1. Atomic state updates and event persistence
  * 2. Background event publishing from outbox
@@ -20,9 +20,7 @@ import { PaymentRouter } from '../orchestration/router';
 import { RetryPolicy } from '../orchestration/retryPolicy';
 import { ConsoleLogger, InMemoryMetricsCollector } from '../infra/observability';
 import { InMemoryLockManager } from '../infra/lockManager';
-import {
-  InMemoryOutboxStore,
-} from '../infra/transactionalOutbox';
+import { InMemoryOutboxStore } from '../infra/transactionalOutbox';
 import { Currency, PaymentMethodType, GatewayType } from '../domain/types';
 import { PaymentEvent, EventType } from '../domain/events';
 
@@ -278,7 +276,9 @@ async function demo3_AtomicityGuarantee(): Promise<void> {
   console.log('ATOMICITY VERIFICATION');
   console.log('═══════════════════════════════════════════════════════════\n');
 
-  console.log(`Payment Final State: ${processResult.isSuccess ? processResult.value.state : 'FAILED'}`);
+  console.log(
+    `Payment Final State: ${processResult.isSuccess ? processResult.value.state : 'FAILED'}`
+  );
   console.log(`\nEvents Generated (${entries.length}):`);
 
   entries.forEach((entry, idx) => {
@@ -493,7 +493,12 @@ async function demo6_OutboxStatistics(): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 3000));
 
   // Get statistics
-  const stats = await service.getOutboxStats() as { pending: number; processing: number; published: number; failed: number };
+  const stats = (await service.getOutboxStats()) as {
+    pending: number;
+    processing: number;
+    published: number;
+    failed: number;
+  };
 
   console.log('═══════════════════════════════════════════════════════════');
   console.log('OUTBOX STATISTICS');

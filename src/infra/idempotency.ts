@@ -1,6 +1,6 @@
 /**
  * IDEMPOTENCY ENGINE - Interview Gold ⭐
- * 
+ *
  * This module implements a production-grade idempotency mechanism that guarantees
  * no double charges even under:
  * - Network retries
@@ -8,14 +8,14 @@
  * - Service crashes and restarts
  * - Concurrent duplicate requests
  * - Partial failures
- * 
+ *
  * Key Guarantees:
  * 1. At-most-once execution for idempotent operations
  * 2. Consistent response for duplicate requests
  * 3. Thread-safe handling of concurrent duplicates
  * 4. Persistence across service restarts
  * 5. Request fingerprinting to detect tampering
- * 
+ *
  * Based on Stripe's idempotency implementation:
  * https://stripe.com/docs/api/idempotent_requests
  */
@@ -51,8 +51,8 @@ export interface RequestFingerprint {
  */
 export enum IdempotencyState {
   PROCESSING = 'PROCESSING', // Request currently being processed
-  COMPLETED = 'COMPLETED',   // Request completed successfully
-  FAILED = 'FAILED',         // Request failed permanently
+  COMPLETED = 'COMPLETED', // Request completed successfully
+  FAILED = 'FAILED', // Request failed permanently
 }
 
 /**
@@ -275,10 +275,7 @@ export class IdempotencyEngine {
   /**
    * Verify request fingerprint matches
    */
-  verifyFingerprint(
-    requestBody: unknown,
-    storedFingerprint: RequestFingerprint
-  ): boolean {
+  verifyFingerprint(requestBody: unknown, storedFingerprint: RequestFingerprint): boolean {
     const currentFingerprint = this.generateFingerprint(requestBody);
     return currentFingerprint.hash === storedFingerprint.hash;
   }
@@ -369,10 +366,7 @@ export class IdempotencyEngine {
   /**
    * Mark idempotency request as completed successfully
    */
-  async complete<TResponse>(
-    idempotencyKey: string,
-    response: TResponse
-  ): Promise<void> {
+  async complete<TResponse>(idempotencyKey: string, response: TResponse): Promise<void> {
     await this.store.updateState(idempotencyKey, IdempotencyState.PROCESSING, {
       state: IdempotencyState.COMPLETED,
       responseBody: response,
@@ -383,10 +377,7 @@ export class IdempotencyEngine {
   /**
    * Mark idempotency request as failed
    */
-  async fail(
-    idempotencyKey: string,
-    error: Error
-  ): Promise<void> {
+  async fail(idempotencyKey: string, error: Error): Promise<void> {
     await this.store.updateState(idempotencyKey, IdempotencyState.PROCESSING, {
       state: IdempotencyState.FAILED,
       error: {
@@ -474,9 +465,7 @@ export class IdempotencyEngine {
    * Wait for in-flight request to complete
    * Polls the idempotency store until request completes or times out
    */
-  private async waitForCompletion<TResponse>(
-    idempotencyKey: string
-  ): Promise<TResponse> {
+  private async waitForCompletion<TResponse>(idempotencyKey: string): Promise<TResponse> {
     let retries = 0;
 
     while (retries < this.config.maxRetries) {
@@ -552,8 +541,8 @@ export class IdempotencyFingerprintMismatchError extends Error {
   ) {
     super(
       `Idempotency key "${idempotencyKey}" was reused with different request body. ` +
-      `Expected hash: ${expectedHash}, Got: ${actualHash}. ` +
-      `This indicates the client changed the request parameters while reusing the same idempotency key.`
+        `Expected hash: ${expectedHash}, Got: ${actualHash}. ` +
+        `This indicates the client changed the request parameters while reusing the same idempotency key.`
     );
     this.name = 'IdempotencyFingerprintMismatchError';
     Object.setPrototypeOf(this, IdempotencyFingerprintMismatchError.prototype);
@@ -584,7 +573,7 @@ export class IdempotencyTimeoutError extends Error {
   ) {
     super(
       `Timeout waiting for in-flight request with idempotency key "${idempotencyKey}" ` +
-      `to complete after ${timeoutMs}ms`
+        `to complete after ${timeoutMs}ms`
     );
     this.name = 'IdempotencyTimeoutError';
     Object.setPrototypeOf(this, IdempotencyTimeoutError.prototype);

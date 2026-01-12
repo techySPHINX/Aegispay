@@ -1,6 +1,6 @@
 /**
  * Lock Manager for ensuring idempotency and preventing race conditions
- * 
+ *
  * This implements distributed locking semantics to ensure that concurrent
  * payment requests with the same idempotency key are serialized.
  */

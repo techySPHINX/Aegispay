@@ -18,10 +18,7 @@ export interface EventBus {
   /**
    * Subscribe to events
    */
-  subscribe(
-    eventType: string,
-    handler: (event: PaymentEvent) => Promise<void>
-  ): Promise<void>;
+  subscribe(eventType: string, handler: (event: PaymentEvent) => Promise<void>): Promise<void>;
 
   /**
    * Unsubscribe from events
@@ -139,7 +136,7 @@ export class ConsoleEventBus implements EventBus {
  * Composite Event Bus - Publishes to multiple event buses
  */
 export class CompositeEventBus implements EventBus {
-  constructor(private buses: EventBus[]) { }
+  constructor(private buses: EventBus[]) {}
 
   async publish(event: PaymentEvent): Promise<void> {
     await Promise.all(this.buses.map((bus) => bus.publish(event)));

@@ -1,6 +1,6 @@
 /**
  * COMPREHENSIVE DEMO: ALL FEATURES
- * 
+ *
  * Demonstrates the complete AegisPay SDK including:
  * 1. Intelligent routing with metrics
  * 2. Circuit breakers with health tracking
@@ -21,9 +21,7 @@ import {
 } from '../orchestration/intelligentRouting';
 
 // Circuit Breakers
-import {
-  CircuitBreakerManager,
-} from '../orchestration/enhancedCircuitBreaker';
+import { CircuitBreakerManager } from '../orchestration/enhancedCircuitBreaker';
 
 // Optimistic Locking
 import {
@@ -307,14 +305,17 @@ async function demoChaosEngineering(): Promise<void> {
   console.log('🔥 DEMO 4: CHAOS ENGINEERING & FAILURE SIMULATION');
   console.log('='.repeat(80) + '\n');
 
-  const realGateway = new MockGateway({
-    apiKey: 'test-key',
-    baseUrl: 'https://mock.stripe.com',
-    timeout: 1000,
-  }, {
-    successRate: 1.0,
-    latency: 100,
-  });
+  const realGateway = new MockGateway(
+    {
+      apiKey: 'test-key',
+      baseUrl: 'https://mock.stripe.com',
+      timeout: 1000,
+    },
+    {
+      successRate: 1.0,
+      latency: 100,
+    }
+  );
 
   const chaosConfig: ChaosConfig = {
     enabled: true,
@@ -427,7 +428,7 @@ async function demoExtensibilityHooks(): Promise<void> {
     priority: 80,
     enabled: true,
     execute: async (context: HookContext): Promise<FraudCheckResult> => {
-      const recentPayments = context.metadata.recentPaymentCount as number || 0;
+      const recentPayments = (context.metadata.recentPaymentCount as number) || 0;
 
       if (recentPayments > 5) {
         return {

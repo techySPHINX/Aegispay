@@ -1,6 +1,6 @@
 /**
  * Pure Functional Payment Orchestration
- * 
+ *
  * This module contains pure business logic for payment orchestration.
  * All side effects are isolated in adapters, making this logic:
  * - Testable without mocks
@@ -10,7 +10,14 @@
  */
 
 import { Payment } from '../domain/payment';
-import { GatewayType, Money, Currency, PaymentMethod, Customer, PaymentState } from '../domain/types';
+import {
+  GatewayType,
+  Money,
+  Currency,
+  PaymentMethod,
+  Customer,
+  PaymentState,
+} from '../domain/types';
 import { IO, Adapters } from './adapters';
 import { PaymentEventFactory } from '../domain/events';
 import { PaymentGateway } from '../gateways/gateway';
@@ -50,39 +57,35 @@ export function createPaymentOrchestration(
   adapters: Adapters,
   eventVersion: number
 ): IO<Payment> {
-  return (
-    adapters.repository
-      .findByIdempotencyKey(command.idempotencyKey)
-      .flatMap((existing) => {
-        if (existing) {
-          // Idempotent: return existing payment
-          return adapters.logger
-            .info('Payment already exists (idempotent)', {
-              paymentId: existing.id,
-              idempotencyKey: command.idempotencyKey,
-            })
-            .chain(adapters.metrics.increment('payment.idempotency_hit'))
-            .map(() => existing);
-        }
+  return adapters.repository.findByIdempotencyKey(command.idempotencyKey).flatMap((existing) => {
+    if (existing) {
+      // Idempotent: return existing payment
+      return adapters.logger
+        .info('Payment already exists (idempotent)', {
+          paymentId: existing.id,
+          idempotencyKey: command.idempotencyKey,
+        })
+        .chain(adapters.metrics.increment('payment.idempotency_hit'))
+        .map(() => existing);
+    }
 
-        // Create new payment (pure domain operation)
-        const payment = createPayment(command);
+    // Create new payment (pure domain operation)
+    const payment = createPayment(command);
 
-        // Save and emit events (side effects isolated)
-        return adapters.repository
-          .save(payment)
-          .flatMap((saved) => {
-            const event = PaymentEventFactory.createPaymentInitiated(saved, eventVersion);
-            return adapters.events.publish(event).map(() => saved);
-          })
-          .flatMap((saved) => {
-            return adapters.logger
-              .info('Payment created', { paymentId: saved.id })
-              .chain(adapters.metrics.increment('payment.created'))
-              .map(() => saved);
-          });
+    // Save and emit events (side effects isolated)
+    return adapters.repository
+      .save(payment)
+      .flatMap((saved) => {
+        const event = PaymentEventFactory.createPaymentInitiated(saved, eventVersion);
+        return adapters.events.publish(event).map(() => saved);
       })
-  );
+      .flatMap((saved) => {
+        return adapters.logger
+          .info('Payment created', { paymentId: saved.id })
+          .chain(adapters.metrics.increment('payment.created'))
+          .map(() => saved);
+      });
+  });
 }
 
 /**
@@ -245,7 +248,8 @@ function processPaymentStep(
 
     if (processResult.isFailure || !processResult.value.success) {
       throw new Error(
-        `Payment processing failed: ${processResult.isFailure ? processResult.error : 'Unknown error'
+        `Payment processing failed: ${
+          processResult.isFailure ? processResult.error : 'Unknown error'
         }`
       );
     }
@@ -324,7 +328,7 @@ function generatePaymentId(): string {
 
 /**
  * Pure function: Recover from crash
- * 
+ *
  * This function reconstructs payment state from events,
  * ensuring correctness even after process crashes.
  */

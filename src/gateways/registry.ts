@@ -67,11 +67,7 @@ export class GatewayRegistry {
   /**
    * Update metrics after a request
    */
-  recordRequest(
-    gatewayType: GatewayType,
-    success: boolean,
-    latency: number
-  ): void {
+  recordRequest(gatewayType: GatewayType, success: boolean, latency: number): void {
     const metrics = this.metrics.get(gatewayType);
     if (!metrics) return;
 

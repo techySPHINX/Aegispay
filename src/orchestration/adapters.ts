@@ -1,6 +1,6 @@
 /**
  * Functional Programming Adapters
- * 
+ *
  * This module implements IO adapters following FP principles.
  * All side effects are isolated into these adapters, making the
  * core orchestration logic pure and testable.
@@ -8,7 +8,12 @@
 
 import { Payment } from '../domain/payment';
 import { Result } from '../domain/types';
-import { PaymentGateway, GatewayInitiateResponse, GatewayAuthResponse, GatewayProcessResponse } from '../gateways/gateway';
+import {
+  PaymentGateway,
+  GatewayInitiateResponse,
+  GatewayAuthResponse,
+  GatewayProcessResponse,
+} from '../gateways/gateway';
 import { PaymentRepository } from '../infra/db';
 import { EventBus } from '../infra/eventBus';
 import { PaymentEvent } from '../domain/events';
@@ -17,7 +22,7 @@ import { PaymentEvent } from '../domain/events';
  * IO monad representing a deferred computation with side effects
  */
 export class IO<T> {
-  constructor(private readonly effect: () => Promise<T>) { }
+  constructor(private readonly effect: () => Promise<T>) {}
 
   /**
    * Execute the IO computation
@@ -111,7 +116,7 @@ export interface RepositoryAdapter {
 }
 
 export class RepositoryAdapterImpl implements RepositoryAdapter {
-  constructor(private repository: PaymentRepository) { }
+  constructor(private repository: PaymentRepository) {}
 
   findById(id: string): IO<Payment | null> {
     return new IO(() => this.repository.findById(id));
@@ -139,7 +144,7 @@ export interface EventAdapter {
 }
 
 export class EventAdapterImpl implements EventAdapter {
-  constructor(private eventBus: EventBus) { }
+  constructor(private eventBus: EventBus) {}
 
   publish(event: PaymentEvent): IO<void> {
     return new IO(() => this.eventBus.publish(event));
@@ -161,11 +166,15 @@ export interface GatewayAdapter {
 
 export class GatewayAdapterImpl implements GatewayAdapter {
   authenticate(payment: Payment, gateway: PaymentGateway): IO<Result<GatewayAuthResponse, Error>> {
-    return new IO(() => gateway.authenticate(payment) as Promise<Result<GatewayAuthResponse, Error>>);
+    return new IO(
+      () => gateway.authenticate(payment) as Promise<Result<GatewayAuthResponse, Error>>
+    );
   }
 
   initiate(payment: Payment, gateway: PaymentGateway): IO<Result<GatewayInitiateResponse, Error>> {
-    return new IO(() => gateway.initiate(payment) as Promise<Result<GatewayInitiateResponse, Error>>);
+    return new IO(
+      () => gateway.initiate(payment) as Promise<Result<GatewayInitiateResponse, Error>>
+    );
   }
 
   process(payment: Payment, gateway: PaymentGateway): IO<Result<GatewayProcessResponse, Error>> {
@@ -191,7 +200,7 @@ export class LoggerAdapterImpl implements LoggerAdapter {
       warn: (msg: string, ctx?: Record<string, unknown>) => void;
       debug: (msg: string, ctx?: Record<string, unknown>) => void;
     }
-  ) { }
+  ) {}
 
   info(message: string, context?: Record<string, unknown>): IO<void> {
     return new IO(async () => {
@@ -234,7 +243,7 @@ export class MetricsAdapterImpl implements MetricsAdapter {
       histogram: (metric: string, value: number, tags?: Record<string, string>) => void;
       gauge: (metric: string, value: number, tags?: Record<string, string>) => void;
     }
-  ) { }
+  ) {}
 
   increment(metric: string, tags?: Record<string, string>): IO<void> {
     return new IO(async () => {

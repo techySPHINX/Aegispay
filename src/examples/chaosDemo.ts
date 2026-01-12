@@ -1,12 +1,12 @@
 /**
  * CHAOS & FAILURE SIMULATION DEMO
- * 
+ *
  * Demonstrates how chaos testing validates system resilience.
- * 
+ *
  * CHAOS TESTING PHILOSOPHY:
  * =========================
  * "Hope is not a strategy" - Test failures before they happen in production
- * 
+ *
  * WHAT WE TEST:
  * =============
  * 1. Gateway timeouts and crashes
@@ -14,7 +14,7 @@
  * 3. Intermittent network failures
  * 4. Resource exhaustion
  * 5. Cascading failures
- * 
+ *
  * WHAT WE VERIFY:
  * ===============
  * 1. No double processing (idempotency)
@@ -23,7 +23,7 @@
  * 4. Retry logic with backoff
  * 5. Observability during failures
  * 6. Data consistency maintained
- * 
+ *
  * HOW CHAOS VALIDATES RESILIENCE:
  * ================================
  * - Inject controlled failures
@@ -47,7 +47,12 @@ import { GatewayType, Money, PaymentState, PaymentMethodType, Currency } from '.
 /**
  * Helper function to create a test payment
  */
-function createTestPayment(id: string, customerId: string, amount: Money, gatewayType: GatewayType): Payment {
+function createTestPayment(
+  id: string,
+  customerId: string,
+  amount: Money,
+  gatewayType: GatewayType
+): Payment {
   return new Payment({
     id,
     idempotencyKey: `${id}-key`,
@@ -112,9 +117,9 @@ class PaymentTracker {
   getMetrics(): { totalPayments: number; completed: number; failed: number; pending: number } {
     return {
       totalPayments: this.payments.length,
-      completed: this.payments.filter(p => p.state === PaymentState.SUCCESS).length,
-      failed: this.payments.filter(p => p.state === PaymentState.FAILURE).length,
-      pending: this.payments.filter(p => p.state === PaymentState.INITIATED).length,
+      completed: this.payments.filter((p) => p.state === PaymentState.SUCCESS).length,
+      failed: this.payments.filter((p) => p.state === PaymentState.FAILURE).length,
+      pending: this.payments.filter((p) => p.state === PaymentState.INITIATED).length,
     };
   }
 }
@@ -122,7 +127,14 @@ class PaymentTracker {
 /**
  * EXPERIMENT 1: Gateway Timeout with Retry
  */
-async function experimentGatewayTimeout(): Promise<{ success: boolean; duration: number; successRate: number; errors: Error[]; circuitBreakerOpens: number; averageLatency: number }> {
+async function experimentGatewayTimeout(): Promise<{
+  success: boolean;
+  duration: number;
+  successRate: number;
+  errors: Error[];
+  circuitBreakerOpens: number;
+  averageLatency: number;
+}> {
   console.log('\n' + '='.repeat(80));
   console.log('EXPERIMENT 1: Gateway Timeout with Retry');
   console.log('='.repeat(80));
@@ -146,7 +158,7 @@ async function experimentGatewayTimeout(): Promise<{ success: boolean; duration:
       // Verify observability
       if (tracker.getPayments().length > 0) {
         // Patch: Map logs to required type for assertObservability
-        const observabilityLogs = tracker.getLogs().map(l => ({
+        const observabilityLogs = tracker.getLogs().map((l) => ({
           paymentId: typeof l.paymentId === 'string' ? l.paymentId : '',
           level: typeof l.level === 'string' ? l.level : 'info',
           message: typeof l.message === 'string' ? l.message : JSON.stringify(l),
@@ -194,7 +206,7 @@ async function experimentGatewayTimeout(): Promise<{ success: boolean; duration:
 
         if (attempts < maxAttempts) {
           // Exponential backoff
-          await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, attempts)));
+          await new Promise((resolve) => setTimeout(resolve, 100 * Math.pow(2, attempts)));
         }
       }
     }
@@ -210,13 +222,13 @@ async function experimentGatewayTimeout(): Promise<{ success: boolean; duration:
   console.log('===========================');
 
   // Additional assertions
-  const completedPayments = tracker.getPayments().filter(p => p.state === PaymentState.SUCCESS);
-  const failedPayments = tracker.getPayments().filter(p => p.state === PaymentState.FAILURE);
+  const completedPayments = tracker.getPayments().filter((p) => p.state === PaymentState.SUCCESS);
+  const failedPayments = tracker.getPayments().filter((p) => p.state === PaymentState.FAILURE);
 
   console.log(`✓ Completed payments: ${completedPayments.length}`);
   console.log(`✓ Failed payments: ${failedPayments.length}`);
   console.log(`✓ Total attempts: ${tracker.getLogs().length}`);
-  console.log(`✓ Retry attempts: ${tracker.getLogs().filter(l => l.event === 'retry').length}`);
+  console.log(`✓ Retry attempts: ${tracker.getLogs().filter((l) => l.event === 'retry').length}`);
 
   // Patch: Ensure return type matches
   return {
@@ -233,17 +245,21 @@ async function experimentGatewayTimeout(): Promise<{ success: boolean; duration:
 /**
  * EXPERIMENT 2: Intermittent Failures
  */
-async function experimentIntermittentFailures(): Promise<{ success: boolean; duration: number; successRate: number; errors: Error[]; circuitBreakerOpens: number; averageLatency: number }> {
+async function experimentIntermittentFailures(): Promise<{
+  success: boolean;
+  duration: number;
+  successRate: number;
+  errors: Error[];
+  circuitBreakerOpens: number;
+  averageLatency: number;
+}> {
   console.log('\n' + '='.repeat(80));
   console.log('EXPERIMENT 2: Intermittent Network Failures');
   console.log('='.repeat(80));
 
   const tracker = new PaymentTracker();
   const mockGateway = new MockGateway({ apiKey: 'dummy' });
-  const chaosGateway = new ChaosGateway(
-    mockGateway,
-    ChaosScenarios.intermittentFailures()
-  );
+  const chaosGateway = new ChaosGateway(mockGateway, ChaosScenarios.intermittentFailures());
 
   const experiment: ChaosExperiment = {
     name: 'Intermittent Failure Recovery',
@@ -257,7 +273,7 @@ async function experimentIntermittentFailures(): Promise<{ success: boolean; dur
       ChaosAssertions.assertNoDuplicates(tracker.getPayments());
 
       // Verify state machine validity
-      tracker.getPayments().forEach(p => {
+      tracker.getPayments().forEach((p) => {
         ChaosAssertions.assertValidState(p);
       });
 
@@ -284,8 +300,14 @@ async function experimentIntermittentFailures(): Promise<{ success: boolean; dur
       tracker.addEvent({ paymentId: payment.id, type: 'completed' });
     } else {
       tracker.addPayment(payment);
-      tracker.addEvent({ paymentId: payment.id, type: 'failed', error: result.isFailure ? result.error : undefined });
-      throw new Error(`Payment failed: ${result.isFailure ? result.error?.message : 'Unknown error'}`);
+      tracker.addEvent({
+        paymentId: payment.id,
+        type: 'failed',
+        error: result.isFailure ? result.error : undefined,
+      });
+      throw new Error(
+        `Payment failed: ${result.isFailure ? result.error?.message : 'Unknown error'}`
+      );
     }
   };
 
@@ -294,7 +316,9 @@ async function experimentIntermittentFailures(): Promise<{ success: boolean; dur
   console.log('\n📋 CORRECTNESS VALIDATION:');
   console.log('===========================');
   console.log(`✓ Payments processed: ${tracker.getPayments().length}`);
-  console.log(`✓ Success rate: ${(tracker.getPayments().filter(p => p.state === PaymentState.SUCCESS).length / tracker.getPayments().length * 100).toFixed(2)}%`);
+  console.log(
+    `✓ Success rate: ${((tracker.getPayments().filter((p) => p.state === PaymentState.SUCCESS).length / tracker.getPayments().length) * 100).toFixed(2)}%`
+  );
 
   // Patch: Ensure return type matches
   return {
@@ -311,7 +335,14 @@ async function experimentIntermittentFailures(): Promise<{ success: boolean; dur
 /**
  * EXPERIMENT 3: Latency Spike
  */
-async function experimentLatencySpike(): Promise<{ success: boolean; duration: number; successRate: number; errors: Error[]; circuitBreakerOpens: number; averageLatency: number }> {
+async function experimentLatencySpike(): Promise<{
+  success: boolean;
+  duration: number;
+  successRate: number;
+  errors: Error[];
+  circuitBreakerOpens: number;
+  averageLatency: number;
+}> {
   console.log('\n' + '='.repeat(80));
   console.log('EXPERIMENT 3: Gateway Latency Spike');
   console.log('='.repeat(80));
@@ -363,12 +394,14 @@ async function experimentLatencySpike(): Promise<{ success: boolean; duration: n
 
   console.log('\n📋 LATENCY ANALYSIS:');
   console.log('====================');
-  const latencies = tracker.getLogs()
-    .filter(l => l.event === 'completed' && typeof l.latency === 'number')
-    .map(l => l.latency as number);
+  const latencies = tracker
+    .getLogs()
+    .filter((l) => l.event === 'completed' && typeof l.latency === 'number')
+    .map((l) => l.latency as number);
 
   if (latencies.length > 0) {
-    const avgLatency = latencies.reduce((a, b) => (a as number) + (b as number), 0) / latencies.length;
+    const avgLatency =
+      latencies.reduce((a, b) => (a as number) + (b as number), 0) / latencies.length;
     const maxLatency = Math.max(...latencies);
     const minLatency = Math.min(...latencies);
 
@@ -447,11 +480,7 @@ async function experimentDoubleProcessing(): Promise<void> {
   console.log('======================');
   const initialBalance = 10000;
   const finalBalance = initialBalance - payment.amount.amount;
-  ChaosAssertions.assertMoneyConservation(
-    initialBalance,
-    finalBalance,
-    tracker.getPayments()
-  );
+  ChaosAssertions.assertMoneyConservation(initialBalance, finalBalance, tracker.getPayments());
 }
 
 /**
@@ -468,9 +497,24 @@ async function experimentSystemRecovery(): Promise<void> {
   console.log('Expected: System recovers to consistent state\n');
 
   // Create payments
-  const payment1 = createTestPayment('pay_recovery_001', 'cust_005', new Money(100, Currency.USD), GatewayType.MOCK);
-  const payment2 = createTestPayment('pay_recovery_002', 'cust_006', new Money(200, Currency.USD), GatewayType.MOCK);
-  const payment3 = createTestPayment('pay_recovery_003', 'cust_007', new Money(300, Currency.USD), GatewayType.MOCK);
+  const payment1 = createTestPayment(
+    'pay_recovery_001',
+    'cust_005',
+    new Money(100, Currency.USD),
+    GatewayType.MOCK
+  );
+  const payment2 = createTestPayment(
+    'pay_recovery_002',
+    'cust_006',
+    new Money(200, Currency.USD),
+    GatewayType.MOCK
+  );
+  const payment3 = createTestPayment(
+    'pay_recovery_003',
+    'cust_007',
+    new Money(300, Currency.USD),
+    GatewayType.MOCK
+  );
 
   // Before crash
   console.log('Before crash:');
@@ -566,8 +610,8 @@ CORRECTNESS INVARIANTS:
   console.log('CHAOS TESTING SUMMARY');
   console.log('█'.repeat(80));
 
-  const passed = results.filter(r => r.success).length;
-  const failed = results.filter(r => !r.success).length;
+  const passed = results.filter((r) => r.success).length;
+  const failed = results.filter((r) => !r.success).length;
 
   console.log(`
 RESULTS:
@@ -575,7 +619,7 @@ RESULTS:
 Total Experiments: ${results.length + 2} (+ 2 manual tests)
 Passed: ${passed}
 Failed: ${failed}
-Success Rate: ${(passed / results.length * 100).toFixed(2)}%
+Success Rate: ${((passed / results.length) * 100).toFixed(2)}%
 
 KEY LEARNINGS:
 ==============

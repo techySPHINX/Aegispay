@@ -2,13 +2,7 @@
  * Example usage of AegisPay SDK
  */
 
-import {
-  AegisPay,
-  Currency,
-  PaymentMethodType,
-  GatewayType,
-  RoutingStrategy,
-} from './index';
+import { AegisPay, Currency, PaymentMethodType, GatewayType, RoutingStrategy } from './index';
 
 async function main(): Promise<void> {
   // Initialize SDK with configuration

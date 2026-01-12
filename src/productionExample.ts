@@ -1,6 +1,6 @@
 /**
  * AegisPay - Production-Ready Example
- * 
+ *
  * This example demonstrates production-ready payment processing
  * with proper error handling, validation, and best practices.
  */
@@ -138,7 +138,7 @@ async function demonstrateIdempotency(aegis: AegisPay): Promise<void> {
 
   const request: CreatePaymentRequest = {
     idempotencyKey,
-    amount: 50.00,
+    amount: 50.0,
     currency: Currency.USD,
     customer: {
       id: 'cust_demo',
@@ -215,25 +215,13 @@ async function main(): Promise<void> {
     console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
     console.log(`💳 Example 1: Standard Payment`);
     console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-    await processPayment(
-      aegis,
-      'ORD-001',
-      99.99,
-      'cust_001',
-      'customer1@example.com'
-    );
+    await processPayment(aegis, 'ORD-001', 99.99, 'cust_001', 'customer1@example.com');
 
     // Example 2: Process another payment
     console.log(`\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
     console.log(`💳 Example 2: Another Payment`);
     console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-    await processPayment(
-      aegis,
-      'ORD-002',
-      149.50,
-      'cust_002',
-      'customer2@example.com'
-    );
+    await processPayment(aegis, 'ORD-002', 149.5, 'cust_002', 'customer2@example.com');
 
     // Example 3: Demonstrate idempotency
     await demonstrateIdempotency(aegis);

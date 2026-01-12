@@ -1,8 +1,8 @@
 /**
  * SDK EXTENSIBILITY HOOKS (FRAMEWORK THINKING)
- * 
+ *
  * Provides plugin architecture for extending AegisPay functionality.
- * 
+ *
  * DESIGN PRINCIPLES:
  * ==================
  * 1. Open/Closed Principle: Open for extension, closed for modification
@@ -10,46 +10,46 @@
  * 3. Composition over Inheritance: Combine multiple hooks
  * 4. Type Safety: Full TypeScript support
  * 5. Non-Breaking: Hooks are optional, system works without them
- * 
+ *
  * HOW EXTENSIBILITY ENABLES LOW-CODE/NO-CODE:
  * ===========================================
- * 
+ *
  * 1. DECLARATIVE CONFIGURATION
  *    Instead of writing code, users configure behavior:
- *    
+ *
  *    // No-code approach
  *    hookRegistry.registerFraudCheck({
  *      name: 'HighValueCheck',
  *      priority: 100,
  *      config: { threshold: 10000 }  // Just config, no code!
  *    });
- * 
+ *
  * 2. VISUAL WORKFLOW BUILDERS
  *    Drag-and-drop interface can generate hooks:
- *    
+ *
  *    [Payment] → [Fraud Check] → [Route to Gateway] → [Log Event]
  *                     ↓                  ↓                 ↓
  *                  config            config           config
- * 
+ *
  * 3. BUSINESS RULE ENGINE
  *    Non-developers can define rules:
- *    
+ *
  *    IF amount > $10,000 THEN require manual approval
  *    IF country = "US" THEN route to Stripe
  *    IF customer.vip = true THEN skip fraud check
- * 
+ *
  * 4. INTEGRATION MARKETPLACE
  *    Pre-built hooks for common use cases:
  *    - Slack notifications
  *    - DataDog metrics
  *    - Custom CRM integration
  *    - Tax calculation services
- * 
+ *
  * 5. CORE LOGIC UNTOUCHED
  *    Payment processing remains simple and tested
  *    Extensions can't break core functionality
  *    Hooks fail gracefully without affecting payments
- * 
+ *
  * AVAILABLE HOOKS:
  * ================
  * 1. PrePaymentValidation - Validate before payment processing
@@ -62,7 +62,7 @@
  * 8. ErrorHandler - Custom error handling
  * 9. CustomValidation - Generic validation hook (NEW)
  * 10. LifecycleHook - Before/after any operation (NEW)
- * 
+ *
  * EXAMPLE:
  * ========
  * // Register fraud check hook
@@ -104,7 +104,7 @@ export interface ValidationResult {
  */
 export interface FraudCheckResult {
   allowed: boolean;
-  riskScore?: number;           // 0.0 (safe) to 1.0 (fraud)
+  riskScore?: number; // 0.0 (safe) to 1.0 (fraud)
   reason?: string;
   metadata?: Record<string, unknown>;
 }
@@ -114,7 +114,7 @@ export interface FraudCheckResult {
  */
 export interface RoutingDecision {
   gatewayType: GatewayType;
-  confidence: number;           // 0.0 to 1.0
+  confidence: number; // 0.0 to 1.0
   reason: string;
   metadata?: Record<string, unknown>;
 }
@@ -168,11 +168,14 @@ export interface ErrorContext extends HookContext {
  */
 export interface RoutingContext extends HookContext {
   availableGateways: GatewayType[];
-  gatewayMetrics: Map<GatewayType, {
-    successRate: number;
-    averageLatency: number;
-    cost: number;
-  }>;
+  gatewayMetrics: Map<
+    GatewayType,
+    {
+      successRate: number;
+      averageLatency: number;
+      cost: number;
+    }
+  >;
 }
 
 // ============================================================================
@@ -184,7 +187,7 @@ export interface RoutingContext extends HookContext {
  */
 export interface Hook {
   name: string;
-  priority: number;             // Higher = runs first
+  priority: number; // Higher = runs first
   enabled: boolean;
 }
 
@@ -227,7 +230,7 @@ export interface PaymentEnrichmentHook extends Hook {
  * Event listener hook
  */
 export interface EventListenerHook extends Hook {
-  eventTypes: string[];         // Which events to listen for
+  eventTypes: string[]; // Which events to listen for
   execute(event: DomainEvent, context: HookContext): Promise<void>;
 }
 
@@ -235,11 +238,7 @@ export interface EventListenerHook extends Hook {
  * Metrics collector hook
  */
 export interface MetricsCollectorHook extends Hook {
-  execute(
-    metricName: string,
-    value: number,
-    tags: Record<string, string>
-  ): Promise<void>;
+  execute(metricName: string, value: number, tags: Record<string, string>): Promise<void>;
 }
 
 /**
@@ -264,8 +263,8 @@ export interface CustomValidationHook extends Hook {
  * Enables aspect-oriented programming patterns
  */
 export interface LifecycleHook extends Hook {
-  operation: string;              // Which operation to hook into
-  stage: 'before' | 'after';      // When to execute
+  operation: string; // Which operation to hook into
+  stage: 'before' | 'after'; // When to execute
   execute(context: HookContext): Promise<void>;
 }
 
@@ -294,7 +293,7 @@ export class HookFactory {
     name: string;
     priority?: number;
     rules: Array<{
-      condition: string;        // e.g., "amount > 10000"
+      condition: string; // e.g., "amount > 10000"
       riskScore: number;
       reason: string;
       block: boolean;
@@ -333,7 +332,7 @@ export class HookFactory {
     name: string;
     priority?: number;
     rules: Array<{
-      condition: string;        // e.g., "country = 'US'"
+      condition: string; // e.g., "country = 'US'"
       gateway: GatewayType;
       confidence: number;
       reason: string;
@@ -374,7 +373,7 @@ export class HookFactory {
     name: string;
     priority?: number;
     checks: Array<{
-      field: string;           // e.g., "amount", "customer.email"
+      field: string; // e.g., "amount", "customer.email"
       operator: 'eq' | 'ne' | 'gt' | 'lt' | 'gte' | 'lte' | 'contains' | 'matches';
       value: unknown;
       errorMessage: string;
@@ -389,11 +388,7 @@ export class HookFactory {
 
         for (const check of config.checks) {
           const fieldValue = HookFactory.getFieldValue(context, check.field);
-          const isValid = HookFactory.compareValues(
-            fieldValue,
-            check.operator,
-            check.value
-          );
+          const isValid = HookFactory.compareValues(fieldValue, check.operator, check.value);
 
           if (!isValid) {
             errors.push(check.errorMessage);
@@ -426,13 +421,20 @@ export class HookFactory {
       const compareValue = value.replace(/['"]/g, '');
 
       switch (operator) {
-        case '>': return Number(fieldValue) > Number(compareValue);
-        case '<': return Number(fieldValue) < Number(compareValue);
-        case '>=': return Number(fieldValue) >= Number(compareValue);
-        case '<=': return Number(fieldValue) <= Number(compareValue);
-        case '=': return String(fieldValue) === compareValue;
-        case '!=': return String(fieldValue) !== compareValue;
-        default: return false;
+        case '>':
+          return Number(fieldValue) > Number(compareValue);
+        case '<':
+          return Number(fieldValue) < Number(compareValue);
+        case '>=':
+          return Number(fieldValue) >= Number(compareValue);
+        case '<=':
+          return Number(fieldValue) <= Number(compareValue);
+        case '=':
+          return String(fieldValue) === compareValue;
+        case '!=':
+          return String(fieldValue) !== compareValue;
+        default:
+          return false;
       }
     } catch {
       return false;
@@ -468,17 +470,24 @@ export class HookFactory {
     compareValue: unknown
   ): boolean {
     switch (operator) {
-      case 'eq': return fieldValue === compareValue;
-      case 'ne': return fieldValue !== compareValue;
-      case 'gt': return Number(fieldValue) > Number(compareValue);
-      case 'lt': return Number(fieldValue) < Number(compareValue);
-      case 'gte': return Number(fieldValue) >= Number(compareValue);
-      case 'lte': return Number(fieldValue) <= Number(compareValue);
+      case 'eq':
+        return fieldValue === compareValue;
+      case 'ne':
+        return fieldValue !== compareValue;
+      case 'gt':
+        return Number(fieldValue) > Number(compareValue);
+      case 'lt':
+        return Number(fieldValue) < Number(compareValue);
+      case 'gte':
+        return Number(fieldValue) >= Number(compareValue);
+      case 'lte':
+        return Number(fieldValue) <= Number(compareValue);
       case 'contains':
         return String(fieldValue).includes(String(compareValue));
       case 'matches':
         return new RegExp(String(compareValue)).test(String(fieldValue));
-      default: return false;
+      default:
+        return false;
     }
   }
 }
@@ -552,7 +561,9 @@ export class HookRegistry {
    */
   registerEventListener(hook: EventListenerHook): void {
     this.eventListenerHooks.push(hook);
-    console.log(`[Hooks] Registered EventListener: ${hook.name} (events: ${hook.eventTypes.join(', ')})`);
+    console.log(
+      `[Hooks] Registered EventListener: ${hook.name} (events: ${hook.eventTypes.join(', ')})`
+    );
   }
 
   /**
@@ -636,9 +647,7 @@ export class HookRegistry {
   }
 
   getEventListenerHooks(eventType: string): EventListenerHook[] {
-    return this.eventListenerHooks.filter(
-      (h) => h.enabled && h.eventTypes.includes(eventType)
-    );
+    return this.eventListenerHooks.filter((h) => h.enabled && h.eventTypes.includes(eventType));
   }
 
   getMetricsCollectorHooks(): MetricsCollectorHook[] {
@@ -646,9 +655,7 @@ export class HookRegistry {
   }
 
   getErrorHandlerHooks(error: Error): ErrorHandlerHook[] {
-    return this.errorHandlerHooks.filter(
-      (h) => h.enabled && h.canHandle(error)
-    );
+    return this.errorHandlerHooks.filter((h) => h.enabled && h.canHandle(error));
   }
 
   getCustomValidationHooks(type?: string): CustomValidationHook[] {
@@ -688,7 +695,7 @@ export class HookRegistry {
  * Executes hooks with error handling
  */
 export class HookExecutor {
-  constructor(private registry: HookRegistry) { }
+  constructor(private registry: HookRegistry) {}
 
   /**
    * Execute pre-payment validation hooks
@@ -783,9 +790,7 @@ export class HookExecutor {
   /**
    * Execute routing strategy hooks
    */
-  async executeRoutingStrategy(
-    context: RoutingContext
-  ): Promise<RoutingDecision | null> {
+  async executeRoutingStrategy(context: RoutingContext): Promise<RoutingDecision | null> {
     const hooks = this.registry.getRoutingStrategyHooks();
 
     for (const hook of hooks) {
@@ -793,7 +798,9 @@ export class HookExecutor {
         const decision = await hook.execute(context);
 
         if (decision.confidence > 0.7) {
-          console.log(`[Hooks] Routing decision by ${hook.name}: ${decision.gatewayType} (confidence: ${decision.confidence})`);
+          console.log(
+            `[Hooks] Routing decision by ${hook.name}: ${decision.gatewayType} (confidence: ${decision.confidence})`
+          );
           return decision;
         }
       } catch (error) {
@@ -827,10 +834,7 @@ export class HookExecutor {
   /**
    * Execute event listener hooks
    */
-  async executeEventListeners(
-    event: DomainEvent,
-    context: HookContext
-  ): Promise<void> {
+  async executeEventListeners(event: DomainEvent, context: HookContext): Promise<void> {
     const hooks = this.registry.getEventListenerHooks(event.eventType);
 
     await Promise.all(
@@ -868,9 +872,7 @@ export class HookExecutor {
   /**
    * Execute error handler hooks
    */
-  async executeErrorHandlers(
-    context: ErrorContext
-  ): Promise<ErrorHandlingResult | null> {
+  async executeErrorHandlers(context: ErrorContext): Promise<ErrorHandlingResult | null> {
     const hooks = this.registry.getErrorHandlerHooks(context.error);
 
     for (const hook of hooks) {
@@ -878,7 +880,9 @@ export class HookExecutor {
         const result = await hook.execute(context);
 
         if (result.handled) {
-          console.log(`[Hooks] Error handled by ${hook.name}: ${result.alternativeAction || 'no action'}`);
+          console.log(
+            `[Hooks] Error handled by ${hook.name}: ${result.alternativeAction || 'no action'}`
+          );
           return result;
         }
       } catch (error) {
@@ -902,10 +906,17 @@ export class HighValueFraudCheck implements FraudCheckHook {
   priority = 100;
   enabled = true;
 
-  constructor(private threshold: number = 10000) { }
+  constructor(private threshold: number = 10000) {}
 
   async execute(context: HookContext): Promise<FraudCheckResult> {
-    if (context.payment.amount.isGreaterThan(new (context.payment.amount.constructor as typeof import('../domain/types').Money)(this.threshold, context.payment.amount.currency))) {
+    if (
+      context.payment.amount.isGreaterThan(
+        new (context.payment.amount.constructor as typeof import('../domain/types').Money)(
+          this.threshold,
+          context.payment.amount.currency
+        )
+      )
+    ) {
       return {
         allowed: false,
         riskScore: 0.9,
@@ -932,7 +943,7 @@ export class GeographicFraudCheck implements FraudCheckHook {
   priority = 90;
   enabled = true;
 
-  constructor(private blockedCountries: string[] = []) { }
+  constructor(private blockedCountries: string[] = []) {}
 
   async execute(context: HookContext): Promise<FraudCheckResult> {
     const country = context.metadata.country as string | undefined;

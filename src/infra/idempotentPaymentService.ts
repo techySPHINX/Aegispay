@@ -1,6 +1,6 @@
 /**
  * Idempotent Payment Service Wrapper
- * 
+ *
  * This wrapper adds idempotency protection to payment operations,
  * ensuring no double charges even under:
  * - Network retries
@@ -10,10 +10,7 @@
  */
 
 import { Payment } from '../domain/payment';
-import {
-  Result,
-  fail,
-} from '../domain/types';
+import { Result, fail } from '../domain/types';
 import { IdempotencyEngine } from './idempotency';
 import { PaymentService, CreatePaymentRequest, ProcessPaymentRequest } from '../api/paymentService';
 import { Logger } from './observability';
@@ -26,11 +23,11 @@ export class IdempotentPaymentService {
     private paymentService: PaymentService,
     private idempotencyEngine: IdempotencyEngine,
     private logger: Logger
-  ) { }
+  ) {}
 
   /**
    * Create payment with idempotency protection
-   * 
+   *
    * Guarantees:
    * - Same idempotency key → same payment (no duplicates)
    * - Request fingerprint validated (detects tampering)
@@ -52,16 +49,10 @@ export class IdempotentPaymentService {
       const result = await this.idempotencyEngine.executeIdempotent<
         CreatePaymentRequest,
         Result<Payment, Error>
-      >(
-        merchantId,
-        'create_payment',
-        request.idempotencyKey,
-        request,
-        async () => {
-          // Execute the actual payment creation
-          return await this.paymentService.createPayment(request);
-        }
-      );
+      >(merchantId, 'create_payment', request.idempotencyKey, request, async () => {
+        // Execute the actual payment creation
+        return await this.paymentService.createPayment(request);
+      });
 
       return result;
     } catch (error) {
@@ -75,7 +66,7 @@ export class IdempotentPaymentService {
 
   /**
    * Process payment with idempotency protection
-   * 
+   *
    * Guarantees:
    * - Same idempotency key → same processing result
    * - No double processing even if service crashes mid-execution
@@ -96,16 +87,10 @@ export class IdempotentPaymentService {
       const result = await this.idempotencyEngine.executeIdempotent<
         ProcessPaymentRequest,
         Result<Payment, Error>
-      >(
-        merchantId,
-        'process_payment',
-        idempotencyKey,
-        request,
-        async () => {
-          // Execute the actual payment processing
-          return await this.paymentService.processPayment(request);
-        }
-      );
+      >(merchantId, 'process_payment', idempotencyKey, request, async () => {
+        // Execute the actual payment processing
+        return await this.paymentService.processPayment(request);
+      });
 
       return result;
     } catch (error) {
@@ -158,10 +143,10 @@ export interface IdempotencyMiddlewareConfig {
 
 /**
  * Create idempotency middleware
- * 
+ *
  * Usage:
  * ```typescript
- * app.post('/payments', 
+ * app.post('/payments',
  *   idempotencyMiddleware(engine, {
  *     headerName: 'Idempotency-Key',
  *     merchantIdExtractor: (req) => req.user.merchantId,
@@ -177,8 +162,14 @@ export function createIdempotencyMiddleware(
   engine: IdempotencyEngine,
   config: IdempotencyMiddlewareConfig
 ) {
-  return async (req: Record<string, unknown>, res: Record<string, unknown>, next: (err?: unknown) => void): Promise<unknown> => {
-    const idempotencyKey = (req as { headers: Record<string, string> }).headers[config.headerName.toLowerCase()];
+  return async (
+    req: Record<string, unknown>,
+    res: Record<string, unknown>,
+    next: (err?: unknown) => void
+  ): Promise<unknown> => {
+    const idempotencyKey = (req as { headers: Record<string, string> }).headers[
+      config.headerName.toLowerCase()
+    ];
 
     if (!idempotencyKey) {
       (res as { status: (code: number) => { json: (data: unknown) => unknown } }).status(400).json({
@@ -238,20 +229,24 @@ export function createIdempotencyMiddleware(
     } catch (error: unknown) {
       const err = error as Error & { name: string };
       if (err.name === 'IdempotencyFingerprintMismatchError') {
-        (res as { status: (code: number) => { json: (data: unknown) => unknown } }).status(400).json({
-          error: 'IDEMPOTENCY_KEY_REUSED',
-          message: err.message,
-          idempotencyKey,
-        });
+        (res as { status: (code: number) => { json: (data: unknown) => unknown } })
+          .status(400)
+          .json({
+            error: 'IDEMPOTENCY_KEY_REUSED',
+            message: err.message,
+            idempotencyKey,
+          });
         return;
       }
 
       if (err.name === 'IdempotencyTimeoutError') {
-        (res as { status: (code: number) => { json: (data: unknown) => unknown } }).status(409).json({
-          error: 'REQUEST_IN_PROGRESS',
-          message: err.message,
-          idempotencyKey,
-        });
+        (res as { status: (code: number) => { json: (data: unknown) => unknown } })
+          .status(409)
+          .json({
+            error: 'REQUEST_IN_PROGRESS',
+            message: err.message,
+            idempotencyKey,
+          });
         return;
       }
 
@@ -267,7 +262,7 @@ export function createIdempotencyMiddleware(
 
 /**
  * Decorator for idempotent methods
- * 
+ *
  * Usage:
  * ```typescript
  * class PaymentAPI {
@@ -286,7 +281,10 @@ export function Idempotent(operation: string) {
   ): PropertyDescriptor {
     const originalMethod = descriptor.value;
 
-    descriptor.value = async function (this: { idempotencyEngine?: IdempotencyEngine }, ...args: unknown[]): Promise<unknown> {
+    descriptor.value = async function (
+      this: { idempotencyEngine?: IdempotencyEngine },
+      ...args: unknown[]
+    ): Promise<unknown> {
       // Assume first arg is merchantId, second is idempotencyKey
       const [merchantId, idempotencyKey, ...restArgs] = args;
 

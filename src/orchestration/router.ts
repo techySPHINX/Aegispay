@@ -63,7 +63,7 @@ export class PaymentRouter {
   constructor(
     private registry: GatewayRegistry,
     private defaultStrategy: RoutingStrategy = RoutingStrategy.HIGHEST_SUCCESS_RATE
-  ) { }
+  ) {}
 
   /**
    * Route payment to the best gateway
@@ -198,9 +198,7 @@ export class PaymentRouter {
    * Evaluate a routing rule
    */
   private evaluateRule(rule: RoutingRule, context: RoutingContext): boolean {
-    return rule.conditions.every((condition) =>
-      this.evaluateCondition(condition, context)
-    );
+    return rule.conditions.every((condition) => this.evaluateCondition(condition, context));
   }
 
   /**
@@ -220,7 +218,10 @@ export class PaymentRouter {
         return Number(contextValue) < Number(condition.value);
 
       case 'in':
-        return Array.isArray(condition.value) && (condition.value as (string | number)[]).includes(contextValue as string | number);
+        return (
+          Array.isArray(condition.value) &&
+          (condition.value as (string | number)[]).includes(contextValue as string | number)
+        );
 
       case 'contains':
         return String(contextValue).includes(String(condition.value));
@@ -271,9 +272,7 @@ export class PaymentRouter {
   /**
    * Get transaction cost breakdown
    */
-  getTransactionCostBreakdown(
-    amount: number
-  ): Array<{ gateway: GatewayType; cost: number }> {
+  getTransactionCostBreakdown(amount: number): Array<{ gateway: GatewayType; cost: number }> {
     const breakdown: Array<{ gateway: GatewayType; cost: number }> = [];
 
     this.gatewayCosts.forEach((_cost, gatewayType) => {
