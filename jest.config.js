@@ -3,7 +3,7 @@
  * Updated for Jest 29+ and ts-jest 29+ (no deprecated 'globals' usage).
  */
 
-const config = {
+module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
   roots: ['<rootDir>/tests'],
@@ -43,5 +43,3 @@ const config = {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
 };
-
-export default config;
