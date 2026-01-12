@@ -7,3 +7,17 @@ coverage/
 .idea/
 .vscode/
 *.tsbuildinfo
+
+# Test artifacts
+test-results/
+junit.xml
+
+# Benchmark reports (keep structure, ignore actual reports)
+benchmark-reports/*.json
+benchmark-reports/*.md
+!benchmark-reports/README.md
+!benchmark-reports/latest.md
+
+# OS specific
+Thumbs.db
+.cache/

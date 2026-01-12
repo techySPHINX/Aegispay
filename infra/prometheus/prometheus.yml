@@ -11,11 +11,11 @@ alerting:
   alertmanagers:
     - static_configs:
         - targets:
-          - alertmanager:9093
+            - alertmanager:9093
 
 # Load rules once and periodically evaluate them
 rule_files:
-  - "alerts/*.yml"
+  - 'alerts/*.yml'
 
 # Scrape configurations
 scrape_configs:
@@ -57,7 +57,12 @@ scrape_configs:
       ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
     bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
     relabel_configs:
-      - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+      - source_labels:
+          [
+            __meta_kubernetes_namespace,
+            __meta_kubernetes_service_name,
+            __meta_kubernetes_endpoint_port_name,
+          ]
         action: keep
         regex: default;kubernetes;https
 

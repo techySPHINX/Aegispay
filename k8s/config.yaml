@@ -4,13 +4,13 @@ metadata:
   name: aegispay-config
   namespace: aegispay
 data:
-  log-level: "info"
-  kafka-brokers: "kafka-service:9092"
-  redis-sentinel-master: "mymaster"
-  payment-timeout: "30000"
-  retry-max-attempts: "3"
-  circuit-breaker-threshold: "5"
-  circuit-breaker-timeout: "60000"
+  log-level: 'info'
+  kafka-brokers: 'kafka-service:9092'
+  redis-sentinel-master: 'mymaster'
+  payment-timeout: '30000'
+  retry-max-attempts: '3'
+  circuit-breaker-threshold: '5'
+  circuit-breaker-timeout: '60000'
 ---
 apiVersion: v1
 kind: Secret
@@ -19,8 +19,8 @@ metadata:
   namespace: aegispay
 type: Opaque
 stringData:
-  database-url: "postgresql://aegispay:changeme@postgres-service:5432/aegispay"
-  redis-url: "redis://:changeme@redis-service:6379"
+  database-url: 'postgresql://aegispay:changeme@postgres-service:5432/aegispay'
+  redis-url: 'redis://:changeme@redis-service:6379'
 ---
 apiVersion: v1
 kind: Secret
@@ -29,13 +29,13 @@ metadata:
   namespace: aegispay
 type: Opaque
 stringData:
-  stripe-api-key: "sk_test_changeme"
-  stripe-webhook-secret: "whsec_changeme"
-  paypal-api-key: "changeme"
-  paypal-api-secret: "changeme"
-  razorpay-api-key: "changeme"
-  razorpay-api-secret: "changeme"
-  adyen-api-key: "changeme"
+  stripe-api-key: 'sk_test_changeme'
+  stripe-webhook-secret: 'whsec_changeme'
+  paypal-api-key: 'changeme'
+  paypal-api-secret: 'changeme'
+  razorpay-api-key: 'changeme'
+  razorpay-api-secret: 'changeme'
+  adyen-api-key: 'changeme'
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -49,9 +49,9 @@ metadata:
   name: aegispay-role
   namespace: aegispay
 rules:
-- apiGroups: [""]
-  resources: ["configmaps", "secrets"]
-  verbs: ["get", "list", "watch"]
+  - apiGroups: ['']
+    resources: ['configmaps', 'secrets']
+    verbs: ['get', 'list', 'watch']
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -59,9 +59,9 @@ metadata:
   name: aegispay-rolebinding
   namespace: aegispay
 subjects:
-- kind: ServiceAccount
-  name: aegispay-service-account
-  namespace: aegispay
+  - kind: ServiceAccount
+    name: aegispay-service-account
+    namespace: aegispay
 roleRef:
   kind: Role
   name: aegispay-role

@@ -8,10 +8,27 @@ A mission-critical payment processing SDK built on distributed systems principle
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)](https://www.typescriptlang.org/)
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/techySPHINX/aegispay)
 [![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen.svg)](https://github.com/techySPHINX/aegispay)
+[![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](https://github.com/techySPHINX/Aegispay/actions)
+[![TPS](https://img.shields.io/badge/TPS-10K%2B-blue.svg)](benchmark-reports/latest.md)
+[![P95 Latency](https://img.shields.io/badge/P95%20Latency-%3C200ms-blue.svg)](benchmark-reports/latest.md)
 
-> **Built for Scale**: Process 10,000+ TPS with sub-200ms P95 latency  
+> **Built for Scale**: Process 10,000+ TPS with sub-200ms P95 latency ✅ **[Benchmarked](benchmark-reports/latest.md)**  
 > **Built for Correctness**: Event sourcing + distributed locking + state machine guarantees  
 > **Built for Resilience**: Circuit breakers + chaos engineering + intelligent routing
+
+---
+
+## 📊 Performance Validation
+
+All performance claims are validated through automated benchmarks:
+
+| Metric            | Claim             | Benchmark Result                           | Status       |
+| ----------------- | ----------------- | ------------------------------------------ | ------------ |
+| **Throughput**    | 10,000+ TPS       | [View Report](benchmark-reports/latest.md) | ✅ Validated |
+| **Latency (P95)** | < 200ms           | [View Report](benchmark-reports/latest.md) | ✅ Validated |
+| **Reliability**   | 95%+ Success Rate | [View Report](benchmark-reports/latest.md) | ✅ Validated |
+
+📖 **[Full Testing Documentation](docs/TESTING.md)** | 📊 **[Benchmark Reports](benchmark-reports/)**
 
 ---
 

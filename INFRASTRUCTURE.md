@@ -29,6 +29,7 @@ docker-compose down -v
 ```
 
 Services will be available at:
+
 - Aegispay API: http://localhost:3000
 - PostgreSQL: localhost:5432
 - Redis: localhost:6379
@@ -185,6 +186,7 @@ terraform output cluster_name
 ### Prometheus
 
 Prometheus is configured to scrape metrics from:
+
 - Aegispay application pods
 - Kubernetes API server
 - Node metrics
@@ -196,6 +198,7 @@ Access: http://localhost:9090 (local) or via K8s port-forward
 ### Grafana
 
 Pre-configured dashboards for:
+
 - Payment processing metrics
 - System health and performance
 - Database metrics
@@ -207,6 +210,7 @@ Default credentials: admin/admin
 ### Jaeger Tracing
 
 Distributed tracing for:
+
 - Payment flow across services
 - Gateway calls
 - Database queries
@@ -308,6 +312,7 @@ Access: http://localhost:16686 (local)
 ### Common Issues
 
 1. **Pods not starting**
+
    ```bash
    kubectl describe pod <pod-name> -n aegispay
    kubectl logs <pod-name> -n aegispay
@@ -332,6 +337,7 @@ Access: http://localhost:16686 (local)
 ## CI/CD Integration
 
 The GitHub Actions workflow automatically:
+
 1. Builds Docker images on push
 2. Runs security scans
 3. Pushes to container registry
@@ -351,6 +357,7 @@ See `.github/workflows/ci.yml` for details.
 ## Support
 
 For issues or questions:
+
 - Open a GitHub issue
 - Check existing documentation
 - Review logs and metrics first
