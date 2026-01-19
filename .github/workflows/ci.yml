@@ -79,7 +79,7 @@ jobs:
         run: pnpm install
 
       - name: Run unit tests
-        run: pnpm run test -- --coverage --coverageDirectory=coverage/unit --coverageThreshold='{}'
+        run: pnpm run test:ci -- --coverageDirectory=coverage/unit
 
       - name: Upload unit test coverage
         uses: codecov/codecov-action@v4
@@ -113,7 +113,7 @@ jobs:
         run: pnpm install
 
       - name: Run integration tests
-        run: pnpm run test -- --coverage --coverageDirectory=coverage/integration --coverageThreshold='{}'
+        run: pnpm run test:ci -- --coverageDirectory=coverage/integration
 
       - name: Upload integration test coverage
         uses: codecov/codecov-action@v4

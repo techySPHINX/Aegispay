@@ -10,6 +10,7 @@
     "dev": "tsc --watch",
     "example": "npx ts-node src/example.ts",
     "test": "jest",
+    "test:ci": "jest --config=jest.config.ci.js --coverage --coverageReporters=text --coverageReporters=lcov --coverageReporters=json-summary",
     "test:unit": "jest tests/unit",
     "test:integration": "jest tests/integration",
     "test:e2e": "jest tests/e2e",
