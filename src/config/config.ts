@@ -77,6 +77,16 @@ export interface AegisPayConfig {
     enabled?: boolean;
     logToConsole?: boolean;
   };
+
+  /**
+   * Gateway configuration
+   */
+  gateway?: {
+    defaultOptions?: {
+      successRate?: number;
+      latency?: number;
+    };
+  };
 }
 
 /**

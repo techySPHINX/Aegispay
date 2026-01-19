@@ -14,10 +14,21 @@ describe('AegisPay E2E Workflows', () => {
     sdk = new AegisPay({
       logging: { level: LogLevel.ERROR, enabled: false },
       events: { logToConsole: false },
+      gateway: {
+        defaultOptions: {
+          successRate: 1.0, // 100% success for deterministic tests
+          latency: 10, // Minimal latency for faster tests
+        },
+      },
     });
 
     // Register mock gateway for testing
     sdk.registerGateway(GatewayType.MOCK, { apiKey: 'test_key' });
+  });
+
+  afterEach(async () => {
+    // Allow any pending promises to complete
+    await new Promise((resolve) => setImmediate(resolve));
   });
 
   // Helper to generate valid idempotency keys (alphanumeric, dash, underscore only)

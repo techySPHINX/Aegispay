@@ -27,9 +27,11 @@ export class AegisPay {
   private router: PaymentRouter;
   private logger: ConsoleLogger;
   private metrics: InMemoryMetricsCollector;
+  private config: AegisPayConfig;
 
   constructor(config?: Partial<AegisPayConfig>) {
     const finalConfig = mergeConfig(config);
+    this.config = finalConfig;
 
     // Initialize infrastructure
     this.repository = new InMemoryPaymentRepository();
@@ -85,8 +87,8 @@ export class AegisPay {
     // In production, this would instantiate real gateways based on type
     if (gatewayType === GatewayType.MOCK) {
       const gateway = new MockGateway(config, {
-        successRate: 0.95,
-        latency: 100,
+        successRate: this.config.gateway?.defaultOptions?.successRate ?? 0.95,
+        latency: this.config.gateway?.defaultOptions?.latency ?? 100,
       });
       this.gatewayRegistry.register(gatewayType, gateway);
       this.logger.info('Gateway registered', { gatewayType });

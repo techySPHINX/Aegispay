@@ -1,6 +1,6 @@
 /**
  * AegisPay Performance Benchmark CLI
- * 
+ *
  * Validates the performance claims:
  * - 10,000+ TPS throughput
  * - Sub-200ms P95 latency
@@ -96,18 +96,9 @@ async function benchmarkTPS(): Promise<BenchmarkResult> {
       });
 
       // State machine transitions
-      PaymentStateMachine.isValidTransition(
-        PaymentState.INITIATED,
-        PaymentState.AUTHENTICATED
-      );
-      PaymentStateMachine.isValidTransition(
-        PaymentState.AUTHENTICATED,
-        PaymentState.PROCESSING
-      );
-      PaymentStateMachine.isValidTransition(
-        PaymentState.PROCESSING,
-        PaymentState.SUCCESS
-      );
+      PaymentStateMachine.isValidTransition(PaymentState.INITIATED, PaymentState.AUTHENTICATED);
+      PaymentStateMachine.isValidTransition(PaymentState.AUTHENTICATED, PaymentState.PROCESSING);
+      PaymentStateMachine.isValidTransition(PaymentState.PROCESSING, PaymentState.SUCCESS);
 
       successCount++;
     } catch (error) {
@@ -245,10 +236,7 @@ async function benchmarkConcurrentLoad(): Promise<BenchmarkResult> {
 
         try {
           // State machine operations under load
-          PaymentStateMachine.isValidTransition(
-            PaymentState.INITIATED,
-            PaymentState.AUTHENTICATED
-          );
+          PaymentStateMachine.isValidTransition(PaymentState.INITIATED, PaymentState.AUTHENTICATED);
           PaymentStateMachine.isValidTransition(
             PaymentState.AUTHENTICATED,
             PaymentState.PROCESSING
@@ -307,10 +295,92 @@ function printResult(result: BenchmarkResult): void {
 }
 
 // ============================================================================
+// SAVE RESULTS
+// ============================================================================
+
+import { writeFileSync, mkdirSync } from 'fs';
+import { join } from 'path';
+
+interface BenchmarkReport {
+  timestamp: string;
+  results: Array<{
+    testName: string;
+    tps: number;
+    latencies: {
+      min: number;
+      mean: number;
+      p50: number;
+      p95: number;
+      p99: number;
+      max: number;
+    };
+    successRate: number;
+    totalRequests: number;
+    duration: number;
+  }>;
+}
+
+function saveResults(results: BenchmarkResult[]): void {
+  const report: BenchmarkReport = {
+    timestamp: new Date().toISOString(),
+    results: results.map((r) => ({
+      testName: r.name,
+      tps: r.tps,
+      latencies: r.latencies,
+      successRate: r.successRate,
+      totalRequests: r.totalRequests,
+      duration: r.duration,
+    })),
+  };
+
+  // Create benchmark-reports directory if it doesn't exist
+  mkdirSync('benchmark-reports', { recursive: true });
+
+  // Save JSON report
+  writeFileSync(join('benchmark-reports', 'latest.json'), JSON.stringify(report, null, 2));
+
+  // Save Markdown report
+  let markdown = '# AegisPay Benchmark Results\n\n';
+  markdown += `**Timestamp:** ${report.timestamp}\n\n`;
+  markdown += '## Summary\n\n';
+  markdown += '| Test | TPS | P95 Latency | Success Rate |\n';
+  markdown += '|------|-----|-------------|---------------|\n';
+
+  report.results.forEach((r) => {
+    markdown += `| ${r.testName} | ${r.tps.toFixed(2)} | ${r.latencies.p95.toFixed(2)}ms | ${r.successRate.toFixed(2)}% |\n`;
+  });
+
+  markdown += '\n## Detailed Results\n\n';
+
+  report.results.forEach((r) => {
+    markdown += `### ${r.testName}\n\n`;
+    markdown += `- **TPS:** ${r.tps.toFixed(2)}\n`;
+    markdown += `- **Total Requests:** ${r.totalRequests.toLocaleString()}\n`;
+    markdown += `- **Duration:** ${r.duration.toFixed(2)}s\n`;
+    markdown += `- **Success Rate:** ${r.successRate.toFixed(2)}%\n`;
+    markdown += `- **Latencies:**\n`;
+    markdown += `  - Min: ${r.latencies.min.toFixed(2)}ms\n`;
+    markdown += `  - Mean: ${r.latencies.mean.toFixed(2)}ms\n`;
+    markdown += `  - P50: ${r.latencies.p50.toFixed(2)}ms\n`;
+    markdown += `  - P95: ${r.latencies.p95.toFixed(2)}ms\n`;
+    markdown += `  - P99: ${r.latencies.p99.toFixed(2)}ms\n`;
+    markdown += `  - Max: ${r.latencies.max.toFixed(2)}ms\n\n`;
+  });
+
+  writeFileSync(join('benchmark-reports', 'latest.md'), markdown);
+}
+
+// ============================================================================
 // MAIN
 // ============================================================================
 
 async function main(): Promise<void> {
+  // Parse command line arguments
+  const args = process.argv.slice(2);
+  const isTpsOnly = args.includes('--tps');
+  const isLatencyOnly = args.includes('--latency');
+  const isConcurrentOnly = args.includes('--concurrent');
+
   console.log('═══════════════════════════════════════════════════════════════════════');
   console.log('🎯 AEGISPAY BENCHMARK SUITE');
   console.log('═══════════════════════════════════════════════════════════════════════');
@@ -327,20 +397,35 @@ async function main(): Promise<void> {
 
   const results: BenchmarkResult[] = [];
 
-  // Run benchmarks
+  // Run benchmarks based on flags
   try {
-    results.push(await benchmarkTPS());
-    printResult(results[0]);
+    if (isTpsOnly) {
+      results.push(await benchmarkTPS());
+      printResult(results[0]);
+    } else if (isLatencyOnly) {
+      results.push(await benchmarkLatency());
+      printResult(results[0]);
+    } else if (isConcurrentOnly) {
+      results.push(await benchmarkConcurrentLoad());
+      printResult(results[0]);
+    } else {
+      // Run all benchmarks
+      results.push(await benchmarkTPS());
+      printResult(results[0]);
 
-    results.push(await benchmarkLatency());
-    printResult(results[1]);
+      results.push(await benchmarkLatency());
+      printResult(results[1]);
 
-    results.push(await benchmarkConcurrentLoad());
-    printResult(results[2]);
+      results.push(await benchmarkConcurrentLoad());
+      printResult(results[2]);
+    }
   } catch (error) {
     console.error('❌ Benchmark failed:', error);
     process.exit(1);
   }
+
+  // Save results
+  saveResults(results);
 
   // Summary
   console.log('═══════════════════════════════════════════════════════════════════════');
@@ -362,6 +447,7 @@ async function main(): Promise<void> {
   });
 
   console.log('');
+  console.log('📁 Results saved to benchmark-reports/latest.json and latest.md');
   console.log('═══════════════════════════════════════════════════════════════════════');
   console.log('');
 
